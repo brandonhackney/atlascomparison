@@ -1,0 +1,15 @@
+Number of volumes by protocol:
+AVLocal:	141
+Bio-Motion:	141
+BowtieRetino:	118
+ComboLocal:	229
+DynamicFaces:	141
+MTLocal:	110
+RestingState:	210
+SocialLocal:	121
+Speech:		141
+ToM:		136
+
+
+!! Exception !!
+STS3 and STS9 both have 104 scans for MTLocal Scan 1 Run 1 instead of 110

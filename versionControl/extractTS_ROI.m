@@ -1,0 +1,414 @@
+function output = extractTS_ROI(subjectNumber,atlasName)
+% output = extractTS(subjectList,atlasName)
+% Reads in SRF, POI, ,SDM, and MTC files for a subject
+% Extracts and outputs the timeseries of each voxel, labeled by POI
+% subjectNumber: an integer subject number (e.g. 3)
+% atlasName: a character vector of the atlas name (e.g. 'schaefer400')
+
+% Suppress a useless Neuroelf warning that shows up in one of the loops
+warning('off','xff:BadTFFCont');
+
+% Convert subject number into ID
+subj = strcat('STS',num2str(subjectNumber));
+
+% Navigate to data folder
+homeDir = pwd;
+cd ..
+cd data
+dataDir = pwd;
+
+%% Cycle through each subject in subjectList
+for i = 1:length(subjectList)
+    try
+    subj = subIDs(i,:);
+    output(i).subID = subj;
+    output(i).atlas = atlasName;
+    % Display subject name
+    fprintf(1,'Subject %s:\n',subj)
+    
+    cd(subj)
+    cd(strcat(subj,'-Freesurfer')) % Ideally scratch this line
+    cd(strcat(subj,'-Surf2BV'))
+    surfDir = pwd;
+    
+    % Read in BrainVoyager files (for each hemisphere)
+    bv(1).hem = 'lh';
+    bv(2).hem = 'rh';
+    bv(1).srf = xff(strcat(subj,'_lh_smoothwm.srf'));
+    bv(2).srf = xff(strcat(subj,'_rh_smoothwm.srf'));
+    bv(1).poi = xff(strcat(subj,'_lh_',atlasName,'.annot.poi'));
+    bv(2).poi = xff(strcat(subj,'_rh_',atlasName,'.annot.poi'));
+    
+    % Get truncated list of labels for ROI analysis
+    cd('/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/');
+    bv(1).template = xff(strcat('template_lh_',atlasName,'.annot.poi'));
+    bv(2).template = xff(strcat('template_rh_',atlasName,'.annot.poi'));
+    cd(surfDir)
+    
+    %% Get list of SDM files... this takes a lot of effort
+    cd .. % do one now, and another later because reasons
+    % hard code for sub differences
+    % easier than trying to control for other folders with S in the name
+    if strcmp(subj,'STS1')
+        folderList = ["1";"2";"3-1";"3-2"];
+    elseif strcmp(subj,'STS5')
+        folderList = ["1";"2-1";"2-2";"3"];
+    elseif strcmp(subj,'STS9')
+        folderList = ["ession1"];
+    else
+        folderList = ["1";"2";"3"];
+    end
+    sessList = strcat(subj,"-S",folderList);
+    sdmList = [];
+    vtcList = [];
+    for folder = 1:length(sessList)
+        cd .. % move to subject's data dir
+        cd(char(sessList(folder))) % cd requires charVec, not string
+        cd(char(strcat('_BV-',subj,'-S',folderList(folder)))) % BV dir
+        sdmList = [sdmList;dir('*.sdm')];
+        vtcList = [vtcList;dir('*.vtc')];
+        cd ..
+    end
+    
+    % I think I end up bypassing this whole process... facepalm
+    
+    cd(surfDir);
+    %% Read in many MTC files
+    mtcList = dir('*.mtc');
+    fprintf(1,'\tFound %i MTC files.\n',length(mtcList));
+    lhCount = 0;
+    rhCount = 0;
+    for file = 1:length(mtcList)
+        mtc = xff(mtcList(file).name);
+        nameParts = strsplit(mtcList(file).name,'_');
+        % subID, sess, task, run, ... hem.mtc
+        session = nameParts{2};
+        task = nameParts{3};
+        run = nameParts{4};
+        
+        if strcmp(task,'RestingState') || strcmp(task,'BowtieRetino') || strcmp(task,'DynamicFaces')
+            fprintf(1,'\tSkipping file %s\n',mtcList(file).name)
+            cd(surfDir) % just in case
+            continue
+        end
+        
+        hemStr = nameParts{end}(1:2); % to strip out the file extension
+        if strcmp(hemStr,'lh')
+            % Do this count thing since there's a mix of hemis in the list
+            lhCount = lhCount + 1;
+            tempCount = lhCount;
+            hem = 1;
+        elseif strcmp(hemStr,'rh')
+            rhCount = rhCount + 1;
+            tempCount = rhCount;
+            hem = 2;
+        end
+        mtcPile(file).data = mtc;
+        mtcPile(file).session = session;
+        mtcPile(file).task = task;
+            taskStack{file} = task;
+        mtcPile(file).run = run;
+        mtcPile(file).hem = hemStr;
+        mtcPile(file).filename = mtcList(file).name;
+        mtcPile(file).path = mtcList(file).folder;
+        
+        %%% Find the SDMs and save predictors
+        % Do this here while the MTC is still in memory because
+        % The normal SDM filename should be the same as the MTC's PRT.
+        % The 3DMC SDM filename is based on the VTC/MTC filename,
+        % But since the MTCs are in a different folder,
+        % Index out of the vtcList using this calculation:
+            if strcmp(nameParts{end},'lh.mtc') % account for 2 per sdm
+                index = (file + 1)/2;
+            else
+                index = file/2;
+            end
+            
+        filePath = mtcPile(file).data.LinkedPRTFile;
+        if strcmp(filePath,'')
+            % MTCs made in RAWork don't have PRTs attached :(
+            % Steal them from the VTC instead, since those are untouched
+            returnPath = pwd;
+            cd(vtcList(index).folder);
+            vtc = xff(vtcList(index).name);
+            filePath = vtc.NameOfLinkedPRT;
+            vtc.ClearObject; % save memory
+            if isempty(filePath)
+                % If there's no PRT attached to the VTC, then skip.
+                % There can't be an SDM without a PRT,
+                % and without an SDM, there's no analysis.
+                fprintf(1,'\tSkipping file with no PRT: %s\n',mtcList(file).name);
+                cd(surfDir);
+                mtcPile(file).pred = [];
+                mtcPile(file).motionpred = [];
+                continue
+            end
+            filePath = [filePath(1:end-4) '.sdm'];
+%             filePath = vtcList(index).name;
+%             filePath = [filePath(1:strfind(filePath,'3DMC')-2),'.sdm'];
+            % At this point, STS9 has only 3DMC sdms (ie no regular ones)
+            % Let the script run by spitting out a warning.
+            if exist(filePath,'file')
+
+                sdm = xff(filePath);
+                mtcPile(file).pred = sdm.SDMMatrix;
+            else
+                fprintf(1,'\tWARNING! SDM not found: %s\n',filePath);
+            end
+            filePath = vtcList(index).name;
+            filePath = [filePath(1:strfind(filePath,'3DMC')+3),'.sdm'];
+            sdmMot = xff(filePath);
+            mtcPile(file).motionpred = sdmMot.SDMMatrix;
+            cd(returnPath);
+            clear returnPath
+        else % if you DO have filepath from an attached PRT
+            if contains(filePath,'RAWork')
+                % Point it to data2 instead
+                filePath = ['/data2',filePath(13:end)];
+            end
+            filePath = [filePath(1:end-4) '.sdm'];
+            sdm = xff(filePath);
+            mtcPile(file).pred = sdm.SDMMatrix;
+
+            filePath = vtcList(index).name;
+            filePath = [vtcList(index).folder,'/',filePath(1:strfind(filePath,'3DMC')+3),'.sdm'];
+            sdmMot = xff(filePath);
+            mtcPile(file).motionpred = sdmMot.SDMMatrix;
+
+        end
+            sdm.ClearObject;
+            sdmMot.ClearObject;
+            
+    end
+
+    % Get counts/lists for future structure
+    % remove empty elements of taskStack and mtcPile
+    mtcPile = mtcPile(~arrayfun(@(x) isempty(x.pred),mtcPile));
+    taskStack = taskStack(~cellfun(@isempty, taskStack));
+    taskList = unique(taskStack);
+    clear taskStack
+
+    
+    %% Extract timeseries from the MTCs and label vertices with POIs
+    for file = 1:length(mtcPile)
+        filename = mtcPile(file).filename;
+        fprintf('\tFile: %s:\n',filename);
+        
+        % Get indexing info pulled from filename
+        taskID = find(strcmp(mtcPile(file).task,taskList));
+        run = mtcPile(file).run;
+            runNum = str2double(run(end)); % make sure you just use the number
+        hem = mtcPile(file).hem;
+            if strcmp(hem,'lh')
+                h = 1;
+            elseif strcmp(hem,'rh')
+                h = 2;
+            end
+
+        fprintf(1,'\t\tApplying %i POIs to run %i %s...',length(bv(h).template.POI),runNum,hem);
+        
+        % Label the SRF vertices with the POI names and the MTC timeseries
+        data = [];
+        goddamnPoi = bv(h).poi.POI; % idk why it won't work without this
+        for j = 1:length(bv(h).template.POI)
+            data(j).label = bv(h).template.POI(j).Name;
+            conv = find(strcmp(data(j).label,{goddamnPoi.Name}));
+            data(j).vertices = bv(h).poi.POI(conv).Vertices;
+            data(j).vertexCoord = bv(h).srf.VertexCoordinate(data(j).vertices,:);
+            data(j).ColorMap = bv(h).poi.POI(conv).Color;
+            data(j).pattern = mtcPile(file).data.MTCData(:,data(j).vertices);
+            data(j).conv = conv;
+            
+
+        end
+
+       
+        % Export labeled timecourse
+        output(i).task(taskID).name = mtcPile(file).task;
+        output(i).task(taskID).hem(h).name = hem;
+        output(i).task(taskID).mtcList = mtcPile;
+        % Temp exports
+        organized.hem(h).task(taskID).run(runNum).labelData = data;
+        organized.hem(h).task(taskID).run(runNum).pred = mtcPile(file).pred;
+        organized.hem(h).task(taskID).run(runNum).motionpred = mtcPile(file).motionpred;
+        
+        
+        clear goddamnPoi
+        mtcPile(file).data.ClearObject;
+        % This is the last point the original MTC file is used
+        % Everything after this is a derivative variable, so it's safe.
+       
+        
+        % Add run data to pred IFF more than one run exists
+        % Otherwise the matrix math for the betas implodes
+        % Calculate as having more than 2 MTCs with the task name,
+        % since if there's one run, you will have 2 MTCs (one per hemi)
+        if length(find(strcmp(taskList{taskID},{mtcPile.task}))) > 2
+            [~, xW] = size(mtcPile(file).pred);
+            organized.hem(h).task(taskID).run(runNum).pred(:,xW + 1) = runNum;
+        end
+        fprintf(1,'Done.\n');
+    end
+    clear xW
+    
+    fprintf(1,'\tConcatenating runs, calculating betas, generating stats...');
+    
+    % Concatenate runs by task
+    for h = 1:2
+        if h == 1
+            hem = 'lh';
+        elseif h == 2
+            hem = 'rh';
+        end
+        
+        for taskID = 1:length(taskList)
+            tempData = data([]); % get the field headers
+                data = data([]); % it's unused now; clear memory
+            tempPred = [];
+            temp3dmc = [];
+            for runNum = 1:length(organized.hem(h).task(taskID).run)
+                for roi = 1:length(organized.hem(h).task(taskID).run(runNum).labelData)
+                    if runNum == 1 || length(tempData) < roi
+                    % Get labels, vertices, etc on first run of each ROI
+                    % Avoid 0-indexing if you're missing run 1
+                        tempData(roi) = organized.hem(h).task(taskID).run(runNum).labelData(roi);
+                    else
+                        % JUST update the pattern by concatenating
+                        tempData(roi).pattern = [tempData(roi).pattern;organized.hem(h).task(taskID).run(runNum).labelData(roi).pattern];
+                    end
+                end
+                % Add predictors once per run (ie not for every ROI)
+                try
+                tempPred = [tempPred;organized.hem(h).task(taskID).run(runNum).pred];
+                catch
+                    fprintf(1,'hem = %s task = %s run = %s',h,taskId,runNum);
+                end
+                temp3dmc = [temp3dmc;organized.hem(h).task(taskID).run(runNum).motionpred];
+            end
+        % Export labeled within-task aggregated timecourse
+        output(i).task(taskID).hem(h).data = tempData;
+        output(i).task(taskID).pred = tempPred;
+        output(i).task(taskID).motionpred = temp3dmc;
+        
+        % Remember that at this stage, you're inside a per-hemisphere loop
+        % Calculate betas
+        cd(homeDir)
+        output(i).task(taskID).hem(h).data = addBetas2(tempData, tempPred);
+        % Recolor parcels based on betas
+            % Determine which column index to use for SD calculation
+        [colInd,negInd] = getConditionFromFilename(taskList{taskID});
+        [output(i).task(taskID).hem(h).data,calcName] = statSD(output(i).task(taskID).hem(h).data,colInd,negInd);
+        % Recolor based on above calculation
+        output(i).task(taskID).hem(h).data = addColors(output(i).task(taskID).hem(h).data,calcName);
+        cd(surfDir)
+
+        end
+        fprintf(1,'Done.\n');
+    end
+    organized = organized([]); % Don't need it anymore, so save memory
+    
+%     fprintf(1,'Done.\n\tCalculating betas...');
+%     cd(homeDir);
+%     
+%     % Determine what column number to use as input 2 here.
+%     % Oh shit that depends on the task, so you can't do everything at once
+%     betaInd = 1;
+%     output(i) = addBetas(output(i),betaInd);
+%     % It prints its own 'Done' confirmation
+%     cd(surfDir);
+            
+            % Save new POI file with new colors for each task
+            fprintf(1,'\tWriting new POIs for visualization...\n');
+            for h = 1:2
+                for m = 1:length(output(i).task)
+                    for z = 1:3 % plus, minus, effect
+                        if z == 1
+                            effect = 'posCond';
+                        elseif z == 2
+                            effect = 'negCond';
+                        elseif z == 3
+                            effect = 'contrastCond';
+                        end
+                  % Reset it each time to ensure you don't compound data
+                    if h == 1
+                        hem = 'lh';
+                            bv(1).poi = xff(strcat(subj,'_lh_',atlasName,'.annot.poi'));
+                    elseif h == 2
+                        hem = 'rh';
+                        bv(2).poi = xff(strcat(subj,'_rh_',atlasName,'.annot.poi'));
+                    end  
+                    
+                    convArray = [];
+                    for j = 1:length(bv(h).template.POI)
+                        conv = output(i).task(m).hem(h).data(j).conv;
+                        convArray(j) = conv;
+                        % There's an uneven number of POIs per hemisphere
+                        if j <= length(output(i).task(m).hem(h).data)
+                            if z == 1
+                                % plus
+                            bv(h).poi.POI(conv).Color = ...
+                                output(i).task(m).hem(h).data(j).ColorMapPos;
+                            elseif z == 2
+                                % neg
+                            bv(h).poi.POI(conv).Color = ...
+                                output(i).task(m).hem(h).data(j).ColorMapNeg;
+                            elseif z == 3
+                                % effect
+                            bv(h).poi.POI(conv).Color = ...
+                                output(i).task(m).hem(h).data(j).ColorMap;
+                            end
+                        end
+                        % Label with the SD value - cut out to keep names
+                        %--
+                        if j <= length(output(i).task(m).hem(h).data)
+                            if z == 1
+                            bv(h).poi.POI(conv).Name = ...
+                            num2str(output(i).task(m).hem(h).data(j).meanPos);
+                            elseif z == 2
+                                bv(h).poi.POI(conv).Name = ...
+                                num2str(output(i).task(m).hem(h).data(j).meanNeg);
+                            elseif z == 3
+                                bv(h).poi.POI(conv).Name = ...
+                                num2str(output(i).task(m).hem(h).data(j).glmEffect);
+                            end
+                        end
+                        %--
+                        
+                        
+                    end
+                    
+                    % Remove unaltered entries from POI w/ logical array
+                    reaper = ones([length(bv(h).poi.POI),1]);
+                    reaper(convArray) = 0;
+                    goddamnPoi = bv(h).poi.POI;
+                    goddamnPoi(logical(reaper)) = [];
+                    bv(h).poi.POI = goddamnPoi;
+                    bv(h).poi.NrOfPOIs = bv(h).template.NrOfPOIs;
+                    clear convArray reaper goddamnPoi;
+                    
+                    taskName = output(i).task(m).name;
+                    newName = strcat(subj,'_',hem,'_',atlasName,'_',taskName,'_',effect,'_trunc.annot.poi');
+                    fprintf(1,'\t\t%s\n',newName)
+
+                    bv(h).poi.SaveAs(char(newName));
+                    end % condition (z)
+                end % task (m)
+            end % hem
+            fprintf(1,'Done.\n');
+        %end
+    %end
+    cd(dataDir) % Start new subject
+    bv = bv([]); % clear memory
+    xff(0, 'clearallobjects'); % should just be the srf and poi at this point
+    catch thisError
+        fprintf(1,'%s didn''t work:\n',subj);
+        fprintf(1,'%s: %s\n',thisError.identifier,thisError.message);
+    end
+end
+
+% Clean up
+cd(homeDir);
+fileOut = saveOutput(output, atlasName);
+fprintf(1,"Job's finished! Output saved to /ROIs/%s\n",fileOut);
+
+end
