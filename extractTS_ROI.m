@@ -13,9 +13,11 @@ subj = strcat('STS',num2str(subjectNumber));
 
 % Navigate to data folder
 homeDir = pwd;
-cd ..
-cd data
-dataDir = pwd;
+cd .. % Move from /analysis/ to project root
+cd(['data' filesep 'deriv'])
+dataDir = pwd; % Base location of all subject folders
+% Location of independent subject .poi files for ROI restriction
+templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
 
 %% Begin data extraction for this subject
 
@@ -25,10 +27,9 @@ dataDir = pwd;
     % Display subject name
     fprintf(1,'Subject %s:\n',subj)
     
-    cd(subj)
-    cd(strcat(subj,'-Freesurfer')) % Ideally scratch this line
-    cd(strcat(subj,'-Surf2BV'))
-    surfDir = pwd;
+    subjDir = strcat(datadir,filesep,subj); % All BV data should be here
+    surfDir = strcat(subjDir,filesep,subj,'-Freesurfer',filesep,subj,'-Surf2BV');
+    cd(surfDir)
     
     % Read in BrainVoyager files (for each hemisphere)
     bv(1).hem = 'lh';
@@ -39,42 +40,22 @@ dataDir = pwd;
     bv(2).poi = xff(strcat(subj,'_rh_',atlasName,'.annot.poi'));
     
     % Get truncated list of labels for ROI analysis
-    cd('/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/');
+    cd(templateDir);
     bv(1).template = xff(strcat('template_lh_',atlasName,'.annot.poi'));
     bv(2).template = xff(strcat('template_rh_',atlasName,'.annot.poi'));
     cd(surfDir)
     
-    %% Get list of SDM files... this takes a lot of effort
-    cd .. % do one now, and another later because reasons
-    % hard code for sub differences
-    % easier than trying to control for other folders with S in the name
-    if strcmp(subj,'STS1')
-        folderList = ["1";"2";"3-1";"3-2"];
-    elseif strcmp(subj,'STS5')
-        folderList = ["1";"2-1";"2-2";"3"];
-    elseif strcmp(subj,'STS9')
-        folderList = ["ession1"];
-    else
-        folderList = ["1";"2";"3"];
-    end
-    sessList = strcat(subj,"-S",folderList);
-    sdmList = [];
-    vtcList = [];
-    for folder = 1:length(sessList)
-        cd .. % move to subject's data dir
-        cd(char(sessList(folder))) % cd requires charVec, not string
-        cd(char(strcat('_BV-',subj,'-S',folderList(folder)))) % BV dir
-        sdmList = [sdmList;dir('*.sdm')];
-        vtcList = [vtcList;dir('*.vtc')];
-        cd ..
-    end
-    % This is easier to search later on, but we still need the struct too
+    %% Get list of SDM and VTC files
+    cd(subjDir);
+    sdmList = dir('*.sdm');
+    vtcList = dir('*.vtc');
+    % Cells are easier to search from than structs, but we still need both
     for i = 1:length(vtcList)
         vtcCell{i} = vtcList(i).name;
     end
     
-    cd(surfDir);
     %% Read in many MTC files
+    cd(subjDir);
     mtcList = dir('*.mtc');
     fprintf(1,'\tFound %i MTC files.\n',length(mtcList));
     lhCount = 0;
@@ -89,7 +70,7 @@ dataDir = pwd;
         
         if strcmp(task,'RestingState') || strcmp(task,'BowtieRetino') %|| strcmp(task,'DynamicFaces')
             fprintf(1,'\tSkipping file %s\n',mtcList(file).name)
-            cd(surfDir) % just in case
+            cd(subjDir) % just in case
             continue
         end
         
@@ -117,10 +98,7 @@ dataDir = pwd;
         % Do this here while the MTC is still in memory because
         % The normal SDM filename should be the same as the MTC's PRT.
         % The 3DMC SDM filename is based on the VTC/MTC filename,
-        % But since the MTCs are in a different folder,
-        % Index out of the vtcList using this calculation:
-        % ...no wait you can't do that. They have different orders.
-        % VTClist is by session, mtcPile is by task
+        % But since VTClist is by session while mtcPile is by task,
         % Find the index from vtcList.name that contains task && run.
         index = find(contains(vtcCell,task) & contains(vtcCell,run));
 
@@ -144,7 +122,7 @@ dataDir = pwd;
                 % There can't be an SDM without a PRT,
                 % and without an SDM, there's no analysis.
                 fprintf(1,'\tSkipping file with no PRT: %s\n',mtcList(file).name);
-                cd(surfDir);
+                cd(subjDir);
                 mtcPile(file).pred = [];
                 mtcPile(file).motionpred = [];
                 continue
@@ -315,7 +293,7 @@ dataDir = pwd;
         output.task(taskID).pred = tempPred;
         output.task(taskID).motionpred = temp3dmc;
         output.task(taskID).predpath = predpaths;
-        otuput.task(taskID).motionpath = motionpaths;
+        output.task(taskID).motionpath = motionpaths;
         clear predpaths motionpaths
         
         % Remember that at this stage, you're inside a per-hemisphere loop
@@ -347,6 +325,7 @@ dataDir = pwd;
             
             % Save new POI file with new colors for each task
             fprintf(1,'\tWriting new POIs for visualization...\n');
+            cd(surfDir);
             for h = 1:2
                 for m = 1:length(output.task)
                     for z = 1:3 % plus, minus, effect
