@@ -17,8 +17,8 @@ function input = generateHistograms(input)
     for s = 1:length(input) % subject
         for t = 1:length(input(s).task) % task
             for h = 1:2 % hemisphere
-                histovec = [histovec;input(s).task(t).hem(h).data(:).glmEffect];
-                mediavec = [mediavec;input(s).task(t).hem(h).data(:).medianGLM];
+                histovec = [histovec;[input(s).task(t).hem(h).data(:).glmEffect]];
+                mediavec = [mediavec;[input(s).task(t).hem(h).data(:).medianGLM]];
             end
         end
     end

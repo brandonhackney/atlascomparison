@@ -6,7 +6,7 @@ function generateBoxplots(subjList,atlasName)
         load(['ROIs' filesep 'STS' num2str(s) '_' atlasName '.mat']);
         for t = 1:length(Pattern(s).task) % task
             for h = 1:2 % hemisphere
-                homogvec(:,s) = [histovec(:,s);Pattern(s).task(t).hem(h).data(:).glmEffect];
+                homogvec(:,s) = [homogvec(:,s);Pattern(s).task(t).hem(h).data(:).glmEffect];
             end
         end
     end
