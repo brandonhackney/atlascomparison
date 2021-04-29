@@ -34,15 +34,15 @@ function input = generateHistograms(input)
         line([med3;med3],ylim);
         text(med3,4,sprintf('Median = %f',med3))
     hold off
+    
     % Scatterplot
     figure(s3);
     plot(histovec,mediavec,'o');
     title(sprintf('%s Consistency',input(1).subID));
     xlabel('Parcel SD');
     ylabel('Parcel Median');
+    
     % Save plots to file
-%                 input(s).task(t).hem(h).plots(3).parcelSD = f3;
-    input(s).task(t).hem(h).plots(3).median = med3;
     savefig(h3,sprintf('Plots/%s_%s_SDhistogram.fig',...
         input(1).atlas,input(1).subID));
     savefig(s3,sprintf('Plots/%s_%s_%s_scatterplot.fig',...
