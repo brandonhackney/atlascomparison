@@ -5,7 +5,7 @@ function input = generateHistograms(input)
 % Saves to Plots folder in current directory.
 % Also writes the median value from each plot into the input struct.
     set(0,'DefaultFigureVisible','off'); % suppress figure display
-    numBins = 5; % while there are 14 ROIs
+    numBins = 10;
     edges = 0:4/numBins:4;
     % Histograms
     h3 = figure();
@@ -17,8 +17,8 @@ function input = generateHistograms(input)
     for s = 1:length(input) % subject
         for t = 1:length(input(s).task) % task
             for h = 1:2 % hemisphere
-                histovec = [histovec;[input(s).task(t).hem(h).data(:).glmEffect]];
-                mediavec = [mediavec;[input(s).task(t).hem(h).data(:).medianGLM]];
+                histovec = [histovec;[input(s).task(t).hem(h).data(:).glmEffect]'];
+                mediavec = [mediavec;[input(s).task(t).hem(h).data(:).medianGLM]'];
             end
         end
     end
@@ -43,10 +43,10 @@ function input = generateHistograms(input)
     ylabel('Parcel Median');
     
     % Save plots to file
-    savefig(h3,sprintf('Plots/%s_%s_SDhistogram.fig',...
-        input(1).atlas,input(1).subID));
-    savefig(s3,sprintf('Plots/%s_%s_%s_scatterplot.fig',...
-        input(1).atlas,input(1).subID));
+    savefig(h3,sprintf('Plots%s%s_%s_SDhistogram.fig',...
+        filesep,input(1).atlas,input(1).subID));
+    savefig(s3,sprintf('Plots%s%s_%s_scatterplot.fig',...
+        filesep,input(1).atlas,input(1).subID));
     set(0,'DefaultFigureVisible','on'); % re-enable figure display
     close all;
 end
