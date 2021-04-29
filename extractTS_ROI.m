@@ -27,7 +27,7 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
     % Display subject name
     fprintf(1,'Subject %s:\n',subj)
     
-    subjDir = strcat(datadir,filesep,subj); % All BV data should be here
+    subjDir = strcat(dataDir,filesep,subj); % All BV data should be here
     surfDir = strcat(subjDir,filesep,subj,'-Freesurfer',filesep,subj,'-Surf2BV');
     cd(surfDir)
     
@@ -112,8 +112,6 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
         if strcmp(filePath,'')
             % MTCs made in RAWork don't have PRTs attached :(
             % Steal them from the VTC instead, since those are untouched
-            returnPath = pwd;
-            cd(vtcList(index).folder);
             vtc = xff(vtcList(index).name);
             filePath = vtc.NameOfLinkedPRT;
             vtc.ClearObject; % save memory
@@ -152,12 +150,10 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
             sdmMot = xff(filePath);
             mtcPile(file).motionpred = sdmMot.SDMMatrix;
             mtcPile(file).motionpath = filePath;
-            cd(returnPath);
-            clear returnPath
         else % if you DO have filepath from an attached PRT
             if contains(filePath,'RAWork')
                 % Point it to data2 instead
-                filePath = ['/data2',filePath(13:end)];
+                filePath = [filesep,'data2',filePath(13:end)];
             end
             filePath = [filePath(1:end-4) '.sdm'];
             sdm = xff(filePath);
@@ -165,7 +161,11 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
             mtcPile(file).predpath = filePath;
 
             filePath = vtcList(index).name;
-            filePath = [vtcList(index).folder,'/',filePath(1:strfind(filePath,'3DMC')+3),'.sdm'];
+            if ~exist([filePath(1:strfind(filePath,'3DMC')+3),'.sdm'],'file')
+                filePath = [vtcList(index).folder,filesep,filePath(1:strfind(filePath,'3DMC')+3),'.sdm'];
+            else
+                filePath = [filePath(1:strfind(filePath,'3DMC')+3),'.sdm'];
+            end
             sdmMot = xff(filePath);
             mtcPile(file).motionpred = sdmMot.SDMMatrix;
             mtcPile(file).motionpath = filePath;
