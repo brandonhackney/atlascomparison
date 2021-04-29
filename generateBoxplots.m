@@ -19,9 +19,9 @@ function generateBoxplots(subjList,atlasName)
     
     b3 = figure();
     boxplot(homogvec,{Pattern.task(1).hem(2).data.label})
-        title('%s Homogeneity by Parcel, RH only',atlasName)
+        title(sprintf('%s Homogeneity by Parcel, RH only',atlasName))
         ylabel('SD of parcel betas')
-        xbalel('Parcel')
+        xlabel('Parcel')
     savefig(b3,sprintf('Plots%s%s_boxplot.fig',...
         filesep,atlasName));
 end
