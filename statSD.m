@@ -15,6 +15,7 @@ function [input,calcName] = statSD(input,posInd,negInd)
         input(i).stdNeg = std(input(i).betaHat(negInd,:)');
         % Keep those separate just in case; actually use these means
         % This accounts for protocols with more than two conditions
+        input(i).stdAll = std(reshape(input(i).betaHat([posInd negInd],:)',[1,numel(input(i).betaHat([posInd negInd],:)')]));
         input(i).meanPos = mean(input(i).stdPos,2);
         input(i).meanNeg = mean(input(i).stdNeg,2);
         input(i).glmEffect = std(mean(input(i).betaHat(posInd,:),1) - mean(input(i).betaHat(negInd,:),1));
