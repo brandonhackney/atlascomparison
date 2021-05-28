@@ -60,7 +60,7 @@ fprintf(1,'QUALITY CONTROL SCRIPT\nRun on %s\n\n',datetime);
 
 warning('off')
 HomeDir = '/data2/2020_STS_Multitask/analysis/';
-DataDir = '/data2/2020_STS_Multitask/data/';
+DataDir = '/data2/2020_STS_Multitask/data/deriv/';
 BkupDir = '/data2/2020_STS_Multitask/backup/';
 cd(DataDir)
 
@@ -72,22 +72,23 @@ output.runTime = datetime;
 dirList = dir('STS*');
 NumSub = length(dirList);
 % for sub = 1:NumSub
-for sub = 8
+for sub = 9
     
     % set up the local path, taking into account subID
     subID = dirList(sub).name;
+    subNum = str2double(subID(4:end));
     subDir = strcat(DataDir, subID);
     
         % Output
         output.subject(sub).ID = subID;
         output.subject(sub).Directory = subDir;
         
-    fprintf(1, 'Subject %i: ', sub);
+    fprintf(1, '%a: ', subID);
     
     % Move into subject directory
      cd(subDir)
-    analysisDir = strcat(subDir,'/',subID,'-Analysis/'); % temporary
-    cd(analysisDir) % temporary
+%     analysisDir = strcat(subDir,'/',subID,'-Analysis/'); % temporary
+%     cd(analysisDir) % temporary
 %      % Get list of session directories in subDir
 %      tempSessList = dir(strcat(subID,'-S*'));
 %      
@@ -158,6 +159,7 @@ for sub = 8
             % get prt filename
             %  add a default value to prevent crashing on empty prts
              %tempPrt = vtc.NameOfLinkedPRT;
+             prt = []; % JUST IN CASE
              if ~isempty(vtc.NameOfLinkedPRT)
                  [PATHSTR,prt,EXT] = fileparts(vtc.NameOfLinkedPRT);
              else
@@ -237,39 +239,64 @@ for sub = 8
                 output.errorList(errorInd).scan = vtcList(v).name;
                 output.errorList(errorInd).errors = errors;
             end
-%         %% 3. Fix what you can
-%         % Specific FMR path problems
-%             % Define check strings
-%             check1 = '/home/austin/Documents/STS-Preprocessing/';
-%             check2 = '/media/tarrlab/sts-data/Pipeline/';
-%             check3 = '/Volumes/KoogleData/STS-R21/';
-%             katString = '/data2/2020_STS_Multitask/data/';
-% 
-%             % Replace the wrong path prefixes with the proper path on kat
-%             dummy = 0;
+        %% 3. Fix what you can
+        % Specific FMR path problems
+            % Define check strings
+            check1 = '/home/austin/Documents/STS-Preprocessing/';
+            check2 = '/media/tarrlab/sts-data/Pipeline/';
+            check3 = '/Volumes/KoogleData/STS-R21/';
+            katString = ['/data2/2020_STS_Multitask/data/deriv/',subID,'/'];
+
+            % Replace the wrong path prefixes with the proper path on kat
+            dummy = [0,0];
 %             if contains(FMR,check1)
 %                 oldFMR = FMR;
 %                 FMR = replace(FMR,check1,katString);
-%                 dummy = 1;
+%                 dummy(1) = 1;
 %             elseif contains(FMR,check2)
 %                 oldFMR = FMR;
 %                 FMR = replace(FMR,check2,katString);
-%                 dummy = 1;
+%                 dummy(1) = 1;
 %             elseif contains(FMR,check3)
 %                 oldFMR = FMR;
 %                 FMR = replace(FMR,check3,katString);
-%                 dummy = 1;
+%                 dummy(1) = 1;
 %             end
 %             
-%             if dummy == 1
+
+            if contains(PATHSTR,check1) || contains(PATHSTR,check2) || contains(PATHSTR,check3)
+%                 oldPRT = PATHSTR;
+%                 PATHSTR = replace(PATHSTR,check1,katString);
+%                 dummy(2) = 1;
+%             elseif contains(PATHSTR,check2)
+%                 oldPRT = PATHSTR;
+%                 PATHSTR = replace(PATHSTR,check2,katString);
+%                 dummy(2) = 1;
+%             elseif contains(PATHSTR,check3)
+%                 oldPRT = PATHSTR;
+%                 PATHSTR = replace(PATHSTR,check3,katString);
+                dummy(2) = 1;
+            end
+            
+            if ~exist([PATHSTR,prt,EXT],'file')
+                dummyu(2) = 0;
+                errors = strcat(errors, "Saved PRT location invalid! ");
+            end
+            % Make sure the proposed location works
+            if ~exist([katString,prt,EXT],'file')
+                dummy(2) = 0;
+                errors = strcat(errors,"Proposed PRT location invalid! ");
+            end
+
+%             if dummy(1) == 1
 %                 longDir = replace(vtcList(v).folder,DataDir,BkupDir);
 %                 if longDir(end) ~= '/', longDir = [longDir,'/']; end
 %                 
 %                 % Check for backup directory and create if not exist
 %                 if ~exist(longDir, 'dir'), mkdir(longDir); end
 %                 
-%                 % Copy original file to backup dir
-%                 filename = vtc.FilenameOnDisk;
+                % Copy original file to backup dir
+                filename = vtc.FilenameOnDisk;
 %                 filename2 = replace(filename,DataDir,BkupDir);
 %                 % But avoid overwriting if it already exists
 %                 if ~exist(filename2,'file')
@@ -282,6 +309,11 @@ for sub = 8
 %             end
 %             
 %             clear check1 check2 check3 katString longDir filename filename2
+            if dummy(2) == 1 && ~isempty(prt)
+                vtc.NameOfLinkedPRT = [katString,prt,EXT];
+                vtc.SaveAs(filename);
+            end
+            
         %% 4. Log and output results
             % include prt, # nvols, TR
              fprintf(1, '\t%s:\n',vtcList(v).name);
@@ -325,6 +357,9 @@ end % for each sub
 
 % Calculate the dimensions of the bounding boxes based on the coordinates
 for x = 1:length(output.subject)
+    if isempty(output.subject(x).ID)
+        continue
+    end
     temp = output.subject(x).VTC(1).boundingBox;
     output.subject(x).BBoxDim(1) = temp(2) - temp(1);
     output.subject(x).BBoxDim(2) = temp(4) - temp(3);
