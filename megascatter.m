@@ -8,6 +8,8 @@ function megascatter(subList)
     for a = 1:length(atlasList)
         atlas = atlasList{a};
         fprintf(1,'Plotting %s...',atlas);
+        x = [];
+        y = [];
         for s = 1:length(subList)
             sub = ['STS',num2str(subList(s))];
             load(['ROIs' filesep sub '_' atlas '.mat']);
@@ -28,9 +30,12 @@ function megascatter(subList)
         subplot(length(atlasList),1,a)
         plot(x,y,'o');
             title([atlas ' SNR']);
-            xlabel('Parcel SD');
-            ylabel('Number of Vertices');
-            xlim([0 20]);
+            ylabel('Parcel SD');
+            xlabel('Number of Vertices');
+            ylim([0 20]);
+            xlim([0 30000]);
+%             yticks(0:2:20);
+            lsline; % requires Statistics and Machine Learning toolbox
         fprintf(1,'Done.\n')
     end
     

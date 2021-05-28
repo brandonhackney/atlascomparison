@@ -1,7 +1,7 @@
 function input = generateHistograms(input)
 % dataStruct = generateHistograms(dataStruct)
 % Takes the output of extractTS_ROI and creates inhomogeneity histograms
-% Makes three plots: task, control, and contrast.
+% Plots the contrast, ignores the other two.
 % Saves to Plots folder in current directory.
 % Also writes the median value from each plot into the input struct.
     set(0,'DefaultFigureVisible','off'); % suppress figure display

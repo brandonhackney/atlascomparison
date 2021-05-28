@@ -18,7 +18,8 @@ function [input,calcName] = statSD(input,posInd,negInd)
         input(i).stdAll = std(reshape(input(i).betaHat([posInd negInd],:)',[1,numel(input(i).betaHat([posInd negInd],:)')]));
         input(i).meanPos = mean(input(i).stdPos,2);
         input(i).meanNeg = mean(input(i).stdNeg,2);
-        input(i).glmEffect = std(mean(input(i).betaHat(posInd,:),1) - mean(input(i).betaHat(negInd,:),1));
+        input(i).glmEffect = std(sum(input(i).betaHat(posInd,:),1) - sum(input(i).betaHat(negInd,:),1));
+        input(i).meanEffect = mean(sum(input(i).betaHat(posInd,:),1) - sum(input(i).betaHat(negInd,:),1));
         % Extract medians for plots
         % Again, average bc of protocols with more than two conditions 
         input(i).medianPos = mean(median(input(i).betaHat(posInd,:),2));

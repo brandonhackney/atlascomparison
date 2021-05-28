@@ -75,12 +75,12 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
         end
         
         hemStr = nameParts{end}(1:2); % to strip out the file extension
-        if strcmp(hemStr,'lh')
+        if strcmp(hemStr,'lh') || strcmp(hemStr,'LH')
             % Do this count thing since there's a mix of hemis in the list
             lhCount = lhCount + 1;
             tempCount = lhCount;
             hem = 1;
-        elseif strcmp(hemStr,'rh')
+        elseif strcmp(hemStr,'rh') || strcmp(hemStr,'RH')
             rhCount = rhCount + 1;
             tempCount = rhCount;
             hem = 2;
@@ -195,9 +195,9 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
 %             runNum = str2double(run(end)); % make sure you just use the number
             runNum = str2double(run(5));
         hem = mtcPile(file).hem;
-            if strcmp(hem,'lh')
+            if strcmp(hem,'lh') || strcmp(hem,'LH')
                 h = 1;
-            elseif strcmp(hem,'rh')
+            elseif strcmp(hem,'rh') || strcmp(hem,'RH')
                 h = 2;
             end
 
@@ -339,10 +339,18 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
                   % Reset it each time to ensure you don't compound data
                     if h == 1
                         hem = 'lh';
+                        if exist(strcat(subj,'_lh_',atlasName,'.annot.poi'),'file')
                             bv(1).poi = xff(strcat(subj,'_lh_',atlasName,'.annot.poi'));
+                        elseif exist(strcat(subj,'_LH_',atlasName,'.annot.poi'),'file')
+                            bv(1).poi = xff(strcat(subj,'_LH_',atlasName,'.annot.poi'));
+                        end
                     elseif h == 2
                         hem = 'rh';
-                        bv(2).poi = xff(strcat(subj,'_rh_',atlasName,'.annot.poi'));
+                        if exist(strcat(subj,'_rh_',atlasName,'.annot.poi'),'file')
+                            bv(2).poi = xff(strcat(subj,'_rh_',atlasName,'.annot.poi'));
+                        elseif exist(strcat(subj,'_RH_',atlasName,'.annot.poi'),'file')
+                            bv(2).poi = xff(strcat(subj,'_RH_',atlasName,'.annot.poi'));
+                        end
                     end  
                     
                     convArray = [];
