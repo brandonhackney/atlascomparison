@@ -252,7 +252,7 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
     clear xW
     fprintf(1,'\tConcatenating runs, calculating betas, generating stats...');
     
-    % Concatenate runs by task
+    %% Concatenate runs by task
     for h = 1:2
         if h == 1
             hem = 'lh';
@@ -280,10 +280,10 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
                 end
                 % Add predictors once per run (ie not for every ROI)
                 try
-                tempPred = [tempPred;organized.hem(h).task(taskID).run(runNum).pred];
-                predpaths{runNum,1} = organized.hem(h).task(taskID).run(runNum).predpath;
+                    tempPred = [tempPred;organized.hem(h).task(taskID).run(runNum).pred];
+                    predpaths{runNum,1} = organized.hem(h).task(taskID).run(runNum).predpath;
                 catch
-                    error('Failed pred cat for hem = %s task = %s run = %s',h,taskId,runNum);
+                    error('Failed pred cat for hem = %s task = %s run = %s',h,taskID,runNum);
                 end
                 temp3dmc = [temp3dmc;organized.hem(h).task(taskID).run(runNum).motionpred];
                 motionpaths{runNum,1} = organized.hem(h).task(taskID).run(runNum).motionpath;
