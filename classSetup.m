@@ -32,7 +32,7 @@ for m = 1:2
 
         Data = [];
             Data.subID = subIDs;
-            Data.taskNames = [];
+            Data.taskNames = '';
             Data.hemi = [];
         index = 0;
         fprintf(1,'\tAtlas: %s\n',atlasList{atlas})
@@ -66,10 +66,14 @@ for m = 1:2
                     % Parcel info
                     for h = 1:2
                         % 1 = left, 2 = right
-                        Data.hemi(h).parcels.name = Pattern.task(task).hem(h).data.label;
-                        Data.hemi(h).parcels.vertices = Pattern.task(task).hem(h).data.vertices;
-                        Data.hemi(h).parcels.vertexCoord = Pattern.task(task).hem(h).data.vertexCoord;
-                        Data.hemi(h).parcels.ColorMap = Pattern.task(task).hem(h).data.ColorMap;
+                        for p = 1:length(Pattern.task(task).hem(h).data)
+                            % I really hate structs like why can't I just
+                            % grab the whole goddamn field at once
+                        Data.hemi(h).parcels(p).name = Pattern.task(task).hem(h).data(p).label;
+                        Data.hemi(h).parcels(p).vertices = Pattern.task(task).hem(h).data(p).vertices;
+                        Data.hemi(h).parcels(p).vertexCoord = Pattern.task(task).hem(h).data(p).vertexCoord;
+                        Data.hemi(h).parcels(p).ColorMap = Pattern.task(task).hem(h).data(p).ColorMap;
+                        end % for p
                     end % for h
                 end % if index == 1
                 
