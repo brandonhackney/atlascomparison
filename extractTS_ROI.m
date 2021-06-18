@@ -60,6 +60,7 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
     fprintf(1,'\tFound %i MTC files.\n',length(mtcList));
     lhCount = 0;
     rhCount = 0;
+    pfile = 0;
     for file = 1:length(mtcList)
         mtc = xff(mtcList(file).name);
         nameParts = strsplit(mtcList(file).name,'_');
@@ -72,6 +73,10 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
             fprintf(1,'\tSkipping file %s\n',mtcList(file).name)
             cd(subjDir) % just in case
             continue
+        elseif strcmp(task,'ComboLocal')
+            contrastList = {'ComboLocal','Objects'};
+        else
+            contrastList = {task};
         end
         
         hemStr = nameParts{end}(1:2); % to strip out the file extension
@@ -85,14 +90,18 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
             tempCount = rhCount;
             hem = 2;
         end
-        mtcPile(file).data = mtc;
-        mtcPile(file).session = session;
-        mtcPile(file).task = task;
-            taskStack{file} = task;
-        mtcPile(file).run = run;
-        mtcPile(file).hem = hemStr;
-        mtcPile(file).filename = mtcList(file).name;
-        mtcPile(file).path = mtcList(file).folder;
+        for x = 1:length(contrastList)
+            % Allow reuse of an MTC but with a different contrast
+            task = contrastList{x};
+        pfile = pfile + 1; % pfile for mtcPile, file for mtcList
+        mtcPile(pfile).data = mtc;
+        mtcPile(pfile).session = session;
+        mtcPile(pfile).task = task;
+            taskStack{pfile} = task;
+        mtcPile(pfile).run = run;
+        mtcPile(pfile).hem = hemStr;
+        mtcPile(pfile).filename = mtcList(file).name;
+        mtcPile(pfile).path = mtcList(file).folder;
         
         %%% Find the SDMs and save predictors
         % Do this here while the MTC is still in memory because
@@ -107,8 +116,8 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
 %         else
 %             index = file/2;
 %         end
-        mtcPile(file).VTCpath = strcat(vtcList(index).folder,'/',vtcList(index).name);
-        filePath = mtcPile(file).data.LinkedPRTFile;
+        mtcPile(pfile).VTCpath = strcat(vtcList(index).folder,'/',vtcList(index).name);
+        filePath = mtcPile(pfile).data.LinkedPRTFile;
         if strcmp(filePath,'')
             % MTCs made in RAWork don't have PRTs attached :(
             % Steal them from the VTC instead, since those are untouched
@@ -121,8 +130,8 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
                 % and without an SDM, there's no analysis.
                 fprintf(1,'\tSkipping file with no PRT: %s\n',mtcList(file).name);
                 cd(subjDir);
-                mtcPile(file).pred = [];
-                mtcPile(file).motionpred = [];
+                mtcPile(pfile).pred = [];
+                mtcPile(pfile).motionpred = [];
                 continue
             end
             if strcmp(filePath(end-4:end),'.prt') || strcmp(filePath(end-3:end),'.prt')
@@ -139,8 +148,8 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
             if exist(filePath,'file')
 
                 sdm = xff(filePath);
-                mtcPile(file).pred = sdm.SDMMatrix;
-                mtcPile(file).predpath = filePath;
+                mtcPile(pfile).pred = sdm.SDMMatrix;
+                mtcPile(pfile).predpath = filePath;
             else
                 fprintf(1,'\tWARNING! SDM not found: %s\n',filePath);
                 continue
@@ -148,8 +157,8 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
             filePath = vtcList(index).name;
             filePath = [filePath(1:strfind(filePath,'3DMC')+3),'.sdm'];
             sdmMot = xff(filePath);
-            mtcPile(file).motionpred = sdmMot.SDMMatrix;
-            mtcPile(file).motionpath = filePath;
+            mtcPile(pfile).motionpred = sdmMot.SDMMatrix;
+            mtcPile(pfile).motionpath = filePath;
         else % if you DO have filepath from an attached PRT
             if contains(filePath,'RAWork')
                 % Point it to data2 instead
@@ -157,8 +166,8 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
             end
             filePath = [filePath(1:end-4) '.sdm'];
             sdm = xff(filePath);
-            mtcPile(file).pred = sdm.SDMMatrix;
-            mtcPile(file).predpath = filePath;
+            mtcPile(pfile).pred = sdm.SDMMatrix;
+            mtcPile(pfile).predpath = filePath;
 
             filePath = vtcList(index).name;
             if ~exist([filePath(1:strfind(filePath,'3DMC')+3),'.sdm'],'file')
@@ -167,14 +176,15 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
                 filePath = [filePath(1:strfind(filePath,'3DMC')+3),'.sdm'];
             end
             sdmMot = xff(filePath);
-            mtcPile(file).motionpred = sdmMot.SDMMatrix;
-            mtcPile(file).motionpath = filePath;
+            mtcPile(pfile).motionpred = sdmMot.SDMMatrix;
+            mtcPile(pfile).motionpath = filePath;
 
-        end
+        end % if filepath is empty
             sdm.ClearObject;
             sdmMot.ClearObject;
             clear filePath
-    end
+        end
+    end % for file in mtcList
 
     % Get counts/lists for future structure
     % remove empty elements of taskStack and mtcPile
