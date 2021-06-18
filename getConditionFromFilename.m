@@ -1,9 +1,13 @@
 function [posInd,negInd, outID] = getConditionFromFilename(taskname)
+% [posInd,negInd, outID] = getConditionFromFilename(taskname)
+% Reads in char task name
+% Outputs arrays to index + and - conditions (for contrasting) from betas
+% outID gets used in the FC scripts, to do ...
+
 errorFlag = 0;
 switch taskname
     case 'AVLocal'
         % A_only, V_only, AV
-        % I think we want AV?
         posInd = 3;
         negInd = [1,2];
         outID = 4;
@@ -14,20 +18,28 @@ switch taskname
         outID = 1;
     case 'ComboLocal'
         % adults, children, bodies, limbs, cars, instruments, houses, corridors, scrambled
-        % Biasing for FFA or EBA? I'm picking FFA.
+        % Biasing for FFA, but do a second one of places vs objects
         posInd = [1,2];
         negInd = [5,6,7,8];
         outID = 3;
     case 'DynamicFaces'
         % static face, static scrambled, dynamic face, dynamic scrambled
+        % Can do dynamic vs static, face vs scramble, or dynamic face vs dynamic scramble
         posInd = [3];
-        negInd = [1,2,4];
+%         negInd = [1,2,4];
+        negInd = 4;
         outID = 7;
     case 'MTLocal'
         % static, motion
         posInd = 2;
         negInd = 1;
         outID = 8;
+    case 'Objects'
+        % adults, children, bodies, limbs, cars, instruments, houses, corridors, scrambled
+        % This is ComboLocal with a secondary contrast
+        posInd = [5,6];
+        negInd = [7,8];
+        outID = 9;
     case 'SocialLocal'
         % social, mechanical
         posInd = 1;
