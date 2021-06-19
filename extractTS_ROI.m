@@ -66,17 +66,18 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
         nameParts = strsplit(mtcList(file).name,'_');
         % subID, sess, task, run, ... hem.mtc
         session = nameParts{2};
-        task = nameParts{3};
+        otask = nameParts{3};
         run = nameParts{4};
         
-        if strcmp(task,'RestingState') || strcmp(task,'BowtieRetino') %|| strcmp(task,'DynamicFaces')
+        if strcmp(otask,'RestingState') || strcmp(otask,'BowtieRetino') %|| strcmp(task,'DynamicFaces')
             fprintf(1,'\tSkipping file %s\n',mtcList(file).name)
             cd(subjDir) % just in case
             continue
-        elseif strcmp(task,'ComboLocal')
+        elseif strcmp(otask,'ComboLocal')
             contrastList = {'ComboLocal','Objects'};
         else
-            contrastList = {task};
+            contrastList = {otask};
+            task = otask;
         end
         
         hemStr = nameParts{end}(1:2); % to strip out the file extension
@@ -109,7 +110,7 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
         % The 3DMC SDM filename is based on the VTC/MTC filename,
         % But since VTClist is by session while mtcPile is by task,
         % Find the index from vtcList.name that contains task && run.
-        index = find(contains(vtcCell,task) & contains(vtcCell,run));
+        index = find(contains(vtcCell,otask) & contains(vtcCell,run));
 
 %         if strcmp(nameParts{end},'lh.mtc') % account for 2 per sdm
 %             index = (file + 1)/2;
@@ -183,7 +184,12 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
             sdm.ClearObject;
             sdmMot.ClearObject;
             clear filePath
-        end
+            if x == length(contrastList)
+                mtcPile(pfile).finalUse = true;
+            else
+                mtcPile(pfile).finalUse = false;
+            end
+        end % for x in contrastList
     end % for file in mtcList
 
     % Get counts/lists for future structure
@@ -241,7 +247,9 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
         organized.hem(h).task(taskID).run(runNum).motionpath = mtcPile(file).motionpath;
         
         clear goddamnPoi
-        mtcPile(file).data.ClearObject;
+        if mtcPile(file).finalUse == true
+            mtcPile(file).data.ClearObject;
+        end
         output.task(taskID).mtcList = rmfield(output.task(taskID).mtcList,'data'); % don't export the xff data
 
         % This is the last point the original MTC file is used.
@@ -428,6 +436,8 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
     catch thisError
         fprintf(1,'%s didn''t work:\n',subj);
         fprintf(1,'%s: %s\n',thisError.identifier,thisError.message);
+        cd(homeDir);
+        throw(thisError)
     end
 
 
