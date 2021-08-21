@@ -5,26 +5,32 @@
 % (because there's an outer loop for task)
 
 % Key variables
+
+%%% These need to be manually adjusted!! %%%
 subList = [1 2 3 4 5 6 7 8 10 11]; % Update this if new data comes in
     % Generate subIDs
     for s = 1:length(subList)
         subIDs(s,:) = pad(['STS',num2str(subList(s))],5);
     end
-numTasks = 8; % excludes RestingState and BowtieRetino
+numTasks = 10; % excludes RestingState
 atlasList = {'schaefer400','gordon333dil','glasser6p0','power6p0'};
+%%% These need to be manually adjusted!! %%%
 
 % Paths
 basedir = pwd;
 outputdir = [basedir filesep 'class' filesep 'data' filesep];
 datadir = [basedir filesep 'ROIs' filesep];
 
-for m = 1:2
+for m = 1:3
     if m == 1
         metric = 'meanB';
         fprintf(1,'Exporting mean betas per contrast.\n')
-    else
+    elseif m == 2
         metric = 'stdB';
         fprintf(1,'Exporing SDs of betas per contrast.\n')
+    elseif m == 3
+        metric = 'meanNegB';
+        fprintf(1,'Exporting mean negative activation per condition.\n')
     end
     for atlas = 1:length(atlasList)
         % do prep
@@ -38,6 +44,7 @@ for m = 1:2
         fprintf(1,'\tAtlas: %s\n',atlasList{atlas})
         for task = 1:numTasks
             fprintf(1,'\t\tTask %i of %i\n',task,numTasks)
+            goodSub = 0;
             for sub = 1:length(subList)
                 % **REMEMBER** that this is an index, since we skip 9
                 
@@ -51,6 +58,7 @@ for m = 1:2
                 else
                     fprintf('\t\t\tProcessing sub %i ...', subList(sub))
                     index = index + 1;
+                    goodSub = goodSub + 1;
                 end
 
                 % Load data
@@ -58,11 +66,11 @@ for m = 1:2
                 load(inname)
                 
                 % On first good run, insert constant info
-                if index == 1
-                    % Task names
-                    if ~strcmp(Pattern.task(task),'RestingState')
+                if goodSub == 1 &&  ~strcmp(Pattern.task(task),'RestingState')
+                    % Insert task name for this task
                     Data.taskNames(task,:) = pad(Pattern.task(task).name,12);
-                    end
+                end
+                if index == 1
                     % Parcel info
                     for h = 1:2
                         % 1 = left, 2 = right
@@ -85,6 +93,8 @@ for m = 1:2
                             Data.hemi(h).data(x,:) = double([Pattern.task(task).hem(h).data(:).meanEffect]);
                         case 'stdB'
                             Data.hemi(h).data(x,:) = double([Pattern.task(task).hem(h).data(:).glmEffect]);
+                        case 'meanNegB'
+                            Data.hemi(h).data(x,:) = double([Pattern.task(task).hem(h).data(:).meanNegActv]);
                     end
                     % Build labels
     %                 Data.hemi(h).labels(x,1) = subList(sub);

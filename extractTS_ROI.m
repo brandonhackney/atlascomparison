@@ -69,8 +69,8 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
         otask = nameParts{3};
         run = nameParts{4};
         
-        if strcmp(otask,'RestingState') || strcmp(otask,'BowtieRetino') %|| strcmp(task,'DynamicFaces')
-            fprintf(1,'\tSkipping file %s\n',mtcList(file).name)
+        if strcmp(otask,'RestingState') %|| strcmp(otask,'BowtieRetino') %|| strcmp(task,'DynamicFaces')
+            fprintf(1,'\tSkipping task %s\n',mtcList(file).name)
             cd(subjDir) % just in case
             continue
         elseif strcmp(otask,'ComboLocal')
@@ -306,17 +306,24 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
                 temp3dmc = [temp3dmc;organized.hem(h).task(taskID).run(runNum).motionpred];
                 motionpaths{runNum,1} = organized.hem(h).task(taskID).run(runNum).motionpath;
             end
+            
+        % Convert scalar run number column to many binary columns
+        % Otherwise you're saying you expect run 1 to be lower etc
+        cd(homeDir)
+        runVec = tempPred(:,end);
+        tempPred = convertRunCol(tempPred);
+            
         % Export labeled within-task aggregated timecourse
         output.task(taskID).hem(h).data = tempData;
         output.task(taskID).pred = tempPred;
         output.task(taskID).motionpred = temp3dmc;
         output.task(taskID).predpath = predpaths;
         output.task(taskID).motionpath = motionpaths;
-        clear predpaths motionpaths
+        output.task(taskID).runNum = runVec;
+        clear predpaths motionpaths runVec
         
         % Remember that at this stage, you're inside a per-hemisphere loop
         % Calculate betas
-        cd(homeDir)
         output.task(taskID).hem(h).data = addBetas2(tempData, tempPred);
         % Recolor parcels based on betas
             % Determine which column index to use for SD calculation

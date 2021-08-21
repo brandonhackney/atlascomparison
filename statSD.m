@@ -19,6 +19,7 @@ function [input,calcName] = statSD(input,posInd,negInd)
         input(i).stdAll = std(reshape(input(i).betaHat([posInd negInd],:)',[1,numel(input(i).betaHat([posInd negInd],:)')]));
         input(i).meanPos = mean(input(i).stdPos,2);
         input(i).meanNeg = mean(input(i).stdNeg,2);
+        input(i).meanNegActv = mean(mean(input(i).betaHat(negInd,:)));
         input(i).glmEffect = std(sum(input(i).betaHat(posInd,:),1)./length(posInd) - sum(input(i).betaHat(negInd,:),1)./length(negInd));
         input(i).meanEffect = mean(sum(input(i).betaHat(posInd,:),1)./length(posInd) - sum(input(i).betaHat(negInd,:),1)./length(negInd));
         % Extract medians for plots
