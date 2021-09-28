@@ -98,11 +98,11 @@ for m = 1:4
                         case 'meanB'
                             Data.hemi(h).data(x,:) = double([Pattern.task(task).hem(h).data(:).meanEffect]);
                         case 'stdB'
-                            Data.hemi(h).data(x,:) = double([Pattern.task(task).hem(h).data(:).glmEffect]);
+                            Data.hemi(h).data(x,:) = double([Pattern.task(task).hem(h).data(:).sdEffect]);
                         case 'meanNegB'
-                            Data.hemi(h).data(x,:) = double([Pattern.task(task).hem(h).data(:).meanNegActv]);
+                            Data.hemi(h).data(x,:) = double([Pattern.task(task).hem(h).data(:).meanNeg]);
                         case 'meanPosB'
-                            Data.hemi(h).data(x,:) = double([Pattern.task(task).hem(h).data(:).meanPosActv]);
+                            Data.hemi(h).data(x,:) = double([Pattern.task(task).hem(h).data(:).meanPos]);
                     end
                     % Build labels
     %                 Data.hemi(h).labels(x,1) = subList(sub);

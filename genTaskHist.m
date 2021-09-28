@@ -15,7 +15,7 @@ function genTaskHist(subList,atlasName)
             sub = subList(s);
             load(['ROIs' filesep 'STS' num2str(sub) '_' atlasName '.mat']);
                 for h = 1:2 % hemisphere
-                    histovec = [histovec;[Pattern.task(t).hem(h).data(:).glmEffect]'];
+                    histovec = [histovec;[Pattern.task(t).hem(h).data(:).sdEffect]'];
                     mediavec = [mediavec;[Pattern.task(t).hem(h).data(:).medianGLM]'];
                 end
             clear Pattern

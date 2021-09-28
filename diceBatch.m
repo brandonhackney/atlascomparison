@@ -26,7 +26,7 @@ for a = 1:length(atlasList)
                     Summary.hemi(h).parcelInfo(s).parcels(p).taskData(t).parcelAlignment = length(intersect(Data.hemi(h).parcelInfo(s).parcels(p).vertices,GLM.task(t).hem(h).cluster)) / length(Data.hemi(h).parcelInfo(s).parcels(p).vertices);
                     % parcelAlignment is a new metric that measures the
                     % percentage of the parcel that overlaps the GLM zone
-                    % glmAlignment is percent of GLM inside a parcel
+                    % glmAlignment is percentage of GLM that fits in parcel
                 end % for p parcels in hemi
             end % for h hemis per subject
             fprintf(1,'Done.\n')

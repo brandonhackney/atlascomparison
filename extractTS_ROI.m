@@ -405,13 +405,13 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
                         if j <= length(output.task(m).hem(h).data)
                             if z == 1
                             bv(h).poi.POI(conv).Name = ...
-                            num2str(output.task(m).hem(h).data(j).meanPos);
+                            num2str(output.task(m).hem(h).data(j).meanSDPos);
                             elseif z == 2
                                 bv(h).poi.POI(conv).Name = ...
-                                num2str(output.task(m).hem(h).data(j).meanNeg);
+                                num2str(output.task(m).hem(h).data(j).meanSDNeg);
                             elseif z == 3
                                 bv(h).poi.POI(conv).Name = ...
-                                num2str(output.task(m).hem(h).data(j).glmEffect);
+                                num2str(output.task(m).hem(h).data(j).sdEffect);
                             end
                         end
                         %--

@@ -11,10 +11,10 @@ taskList = {'AVLocal','Bio-Motion','ComboLocal','DynamicFaces','MTLocal',...
             load(['ROIs' filesep 'STS' num2str(s) '_' atlasName '.mat']);
             for h = 2 % hemisphere
                 if sind == 1
-                    homogvec = [Pattern.task(t).hem(h).data(:).glmEffect];
-                % switch glmEffect for meanEffect after running new statSD
+                    homogvec = [Pattern.task(t).hem(h).data(:).sdEffect];
+                % switch sdEffect for meanEffect after running new statSD
                 else
-                    homogvec = [homogvec; [Pattern.task(t).hem(h).data(:).glmEffect]];
+                    homogvec = [homogvec; [Pattern.task(t).hem(h).data(:).sdEffect]];
                 end
             end % hem
         end % sub

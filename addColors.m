@@ -11,11 +11,11 @@ function output = addColors(input,measure)
         switch measure
             case 'SD'
                 if i == 1
-                    values = cell2mat({input.meanPos}');
+                    values = cell2mat({input.meanSDPos}');
                 elseif i == 2
-                    values = cell2mat({input.meanNeg}');
+                    values = cell2mat({input.meanSDNeg}');
                 elseif i == 3
-                    values = cell2mat({input.glmEffect}');
+                    values = cell2mat({input.sdEffect}');
                 end
             % Add more cases as you add new measures
             % Explicitly call the field name for the calculation's output
