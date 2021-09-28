@@ -18,6 +18,7 @@ function [input,calcName] = statSD(input,posInd,negInd)
         % Scale conditions by number of items so they sum to 0
         input(i).stdAll = std(reshape(input(i).betaHat([posInd negInd],:)',[1,numel(input(i).betaHat([posInd negInd],:)')]));
         input(i).meanPos = mean(input(i).stdPos,2);
+        input(i).meanPosActv = mean(mean(input(i).betaHat(posInd,:)));
         input(i).meanNeg = mean(input(i).stdNeg,2);
         input(i).meanNegActv = mean(mean(input(i).betaHat(negInd,:)));
         input(i).glmEffect = std(sum(input(i).betaHat(posInd,:),1)./length(posInd) - sum(input(i).betaHat(negInd,:),1)./length(negInd));

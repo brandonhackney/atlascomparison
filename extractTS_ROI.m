@@ -75,6 +75,8 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
             continue
         elseif strcmp(otask,'ComboLocal')
             contrastList = {'ComboLocal','Objects'};
+        elseif strcmp(otask,'DynamicFaces')
+            contrastList = {'DynamicFaces','Motion-Faces'};
         else
             contrastList = {otask};
             task = otask;

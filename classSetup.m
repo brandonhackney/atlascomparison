@@ -1,7 +1,7 @@
 % Prepare data for classification
 % Reads in individual subject-atlas data files and combines per atlas
 % Strips out unnecesary variables so that classification data is light
-% Extremely slow bc it loads each subject file 8 times
+% Extremely slow bc it loads each subject file something like 8 times
 % (because there's an outer loop for task)
 
 % Key variables
@@ -12,7 +12,8 @@ subList = [1 2 3 4 5 6 7 8 10 11]; % Update this if new data comes in
     for s = 1:length(subList)
         subIDs(s,:) = pad(['STS',num2str(subList(s))],5);
     end
-numTasks = 10; % excludes RestingState
+load('getFilePartsFromContrast.mat');
+numTasks = length(conditionList); % excludes RestingState
 atlasList = {'schaefer400','gordon333dil','glasser6p0','power6p0'};
 %%% These need to be manually adjusted!! %%%
 
@@ -21,7 +22,7 @@ basedir = pwd;
 outputdir = [basedir filesep 'class' filesep 'data' filesep];
 datadir = [basedir filesep 'ROIs' filesep];
 
-for m = 1:3
+for m = 1:4
     if m == 1
         metric = 'meanB';
         fprintf(1,'Exporting mean betas per contrast.\n')
@@ -31,6 +32,9 @@ for m = 1:3
     elseif m == 3
         metric = 'meanNegB';
         fprintf(1,'Exporting mean negative activation per condition.\n')
+    elseif m == 4
+        metric = 'meanPosB';
+        fprintf(1,'Exporting mean positive activation per condition.\n')
     end
     for atlas = 1:length(atlasList)
         % do prep
@@ -70,23 +74,25 @@ for m = 1:3
                     % Insert task name for this task
                     Data.taskNames(task,:) = pad(Pattern.task(task).name,12);
                 end
-                if index == 1
-                    % Parcel info
-                    for h = 1:2
-                        % 1 = left, 2 = right
-                        for p = 1:length(Pattern.task(task).hem(h).data)
-                            % I really hate structs like why can't I just
-                            % grab the whole goddamn field at once
-                        Data.hemi(h).parcels(p).name = Pattern.task(task).hem(h).data(p).label;
-                        Data.hemi(h).parcels(p).vertices = Pattern.task(task).hem(h).data(p).vertices;
-                        Data.hemi(h).parcels(p).vertexCoord = Pattern.task(task).hem(h).data(p).vertexCoord;
-                        Data.hemi(h).parcels(p).ColorMap = Pattern.task(task).hem(h).data(p).ColorMap;
-                        end % for p
-                    end % for h
-                end % if index == 1
+
+                % Parcel info
+                for h = 1:2
+                    % 1 = left, 2 = right
+                    for p = 1:length(Pattern.task(task).hem(h).data)
+                        % I really hate structs like why can't I just
+                        % grab the whole goddamn field at once
+                    Data.hemi(h).parcelInfo(sub).subID = subList(sub);
+                    Data.hemi(h).parcelInfo(sub).parcels(p).name = Pattern.task(task).hem(h).data(p).label;
+                    Data.hemi(h).parcelInfo(sub).parcels(p).vertices = Pattern.task(task).hem(h).data(p).vertices;
+                    Data.hemi(h).parcelInfo(sub).parcels(p).vertexCoord = Pattern.task(task).hem(h).data(p).vertexCoord;
+                    Data.hemi(h).parcelInfo(sub).parcels(p).ColorMap = Pattern.task(task).hem(h).data(p).ColorMap;
+                    end % for p
+                end % for h
+
                 
                 % Build data
                 x = length(subList) * (task-1) + sub; % an index
+                    % accounts for having per subject per task order
                 for h = 1:2
                     switch metric
                         case 'meanB'
@@ -95,6 +101,8 @@ for m = 1:3
                             Data.hemi(h).data(x,:) = double([Pattern.task(task).hem(h).data(:).glmEffect]);
                         case 'meanNegB'
                             Data.hemi(h).data(x,:) = double([Pattern.task(task).hem(h).data(:).meanNegActv]);
+                        case 'meanPosB'
+                            Data.hemi(h).data(x,:) = double([Pattern.task(task).hem(h).data(:).meanPosActv]);
                     end
                     % Build labels
     %                 Data.hemi(h).labels(x,1) = subList(sub);
