@@ -6,12 +6,12 @@ fprintf(1,'\n\nStarting Dice Coefficient calculations...')
 
 for a = 1:length(atlasList)
     atlas = atlasList{a};
-    fprintf(1,'Atlas %s:\n',atlasList{a})
+    fprintf(1,'Atlas %s:\n',atlas)
     for s = 1:length(subList)
         fprintf(1,'Subject %i:\n',subList(s))
-        fname = [homedir filesep 'class' filesep 'data' filesep 'Classify_meanB_' atlasList{a} '_effect.mat'];
+        fname = [homedir filesep 'class' filesep 'data' filesep 'Classify_meanB_' atlas '_effect.mat'];
         load(fname)
-        load([homedir filesep 'ROIs' filesep 'GLM' filesep 'STS' num2str(subList(s)) '_GLMs.mat']);
+        load([homedir filesep 'ROIs' filesep 'GLM' filesep 'STS' num2str(subList(s)) '_GLMs_' atlas '.mat']);
         if s == 1
             Summary = Data;
         end
@@ -19,11 +19,11 @@ for a = 1:length(atlasList)
         for t = 1:length(GLM.task)
             fprintf(1,'\tTask %s...',GLM.task(t).name)
             for h = 1:2
-                for p = 1:length(Data.hemi(h).parcels)
-                    Summary.hemi(h).parcels(p).taskData(t).taskName = GLM.task(t).name;
-                    Summary.hemi(h).parcels(p).taskData(t).DiceCoeff(s) = diceParcel(Data.hemi(h).parcels(p).vertices,GLM.task(t).hem(h).cluster,GLM.task(t).hem(h).numVert);
-                    Summary.hemi(h).parcels(p).taskData(t).glmAlignment(s) = length(intersect(Data.hemi(h).parcels(p).vertices,GLM.task(t).hem(h).cluster)) / length(GLM.task(t).hem(h).cluster);
-                    Summary.hemi(h).parcels(p).taskData(t).parcelAlignment(s) = length(intersect(Data.hemi(h).parcels(p).vertices,GLM.task(t).hem(h).cluster)) / length(Data.hemi(h).parcels(p).vertices);
+                for p = 1:length(Data.hemi(h).parcelInfo(s).parcels)
+                    Summary.hemi(h).parcelInfo(s).parcels(p).taskData(t).taskName = GLM.task(t).name;
+                    Summary.hemi(h).parcelInfo(s).parcels(p).taskData(t).DiceCoeff = diceParcel(Data.hemi(h).parcelInfo(s).parcels(p).vertices,GLM.task(t).hem(h).cluster,GLM.task(t).hem(h).numVert);
+                    Summary.hemi(h).parcelInfo(s).parcels(p).taskData(t).glmAlignment = length(intersect(Data.hemi(h).parcelInfo(s).parcels(p).vertices,GLM.task(t).hem(h).cluster)) / length(GLM.task(t).hem(h).cluster);
+                    Summary.hemi(h).parcelInfo(s).parcels(p).taskData(t).parcelAlignment = length(intersect(Data.hemi(h).parcelInfo(s).parcels(p).vertices,GLM.task(t).hem(h).cluster)) / length(Data.hemi(h).parcelInfo(s).parcels(p).vertices);
                     % parcelAlignment is a new metric that measures the
                     % percentage of the parcel that overlaps the GLM zone
                     % glmAlignment is percent of GLM inside a parcel
@@ -36,9 +36,9 @@ for a = 1:length(atlasList)
     % Export results to /class/data/
     Summary.hemi = rmfield(Summary.hemi,{'data','labels'});
     Summary.hemi(1).name = 'lh'; Summary.hemi(2).name = 'rh';
-    fname = [homedir filesep 'class' filesep 'data' filesep 'Summary_Dice_' atlasList{a} '.mat'];
+    fname = [homedir filesep 'class' filesep 'data' filesep 'Summary_Dice_' atlas '.mat'];
     save(fname,'Summary');
-    fprintf(1,'Atlas %s exported to %s\n\n',atlasList{a},fname)
+    fprintf(1,'Atlas %s exported to %s\n\n',atlas,fname)
 end % for a atlas
 
 fprintf(1,'\n\nDice Coefficients done calculating.\n\n')

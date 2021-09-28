@@ -10,7 +10,7 @@ switch taskname
         % A_only, V_only, AV
         posInd = 3;
         negInd = [1,2];
-        outID = 4;
+        outID = 6;
         numConds = 3;
     case 'Bio-Motion'
         % biological, scrambled
@@ -25,14 +25,14 @@ switch taskname
         % Horizontal, Vertical, Fixation
         posInd = 1;
         negInd = 2;
-        outID = 10;
+        outID = 8;
         numConds = 3;
     case 'ComboLocal'
         % adults, children, bodies, limbs, cars, instruments, houses, corridors, scrambled
         % Biasing for FFA, but do a second one of places vs objects
         posInd = [1,2];
         negInd = [5,6,7,8];
-        outID = 3;
+        outID = 4;
         numConds = 9;
     case 'DynamicFaces'
         % static face, static scrambled, dynamic face, dynamic scrambled
@@ -40,20 +40,28 @@ switch taskname
         posInd = [3];
 %         negInd = [1,2,4];
         negInd = 4;
-        outID = 7;
+        outID = 3;
         numConds = 4;
+    case 'Motion-Faces'
+       % static face, static scrambled, dynamic face, dynamic scrambled
+        % Can do dynamic vs static, face vs scramble, or dynamic face vs dynamic scramble
+        posInd = [3];
+%         negInd = [1,2,4];
+        negInd = 1;
+        outID = 9;
+        numConds = 4; 
     case 'MTLocal'
         % static, motion
         posInd = 2;
         negInd = 1;
-        outID = 8;
+        outID = 7;
         numConds = 2;
     case 'Objects'
         % adults, children, bodies, limbs, cars, instruments, houses, corridors, scrambled
         % This is ComboLocal with a secondary contrast
         posInd = [5,6];
         negInd = [7,8];
-        outID = 9;
+        outID = 10;
         numConds = 9;
     case 'SocialLocal'
         % social, mechanical
@@ -65,14 +73,14 @@ switch taskname
         % speech, scn
         posInd = 1;
         negInd = 2;
-        outID = 5;
+        outID = 11;
         numConds = 2;
     case 'ToM'
         % belief, photo
         % check with john
         posInd = 1;
         negInd = 2;
-        outID = 6;
+        outID = 5;
         numConds = 2;
     otherwise
         errorFlag = 1;
