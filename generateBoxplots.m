@@ -8,9 +8,9 @@ function generateBoxplots(subjList,atlasName)
         for t = 1:length(Pattern.task) % task
             for h = 2 % hemisphere
                 if t == 1 && sind == 1
-                    homogvec = [Pattern.task(t).hem(h).data(:).glmEffect];
+                    homogvec = [Pattern.task(t).hem(h).data(:).sdEffect];
                 else
-                    homogvec = [homogvec; [Pattern.task(t).hem(h).data(:).glmEffect]];
+                    homogvec = [homogvec; [Pattern.task(t).hem(h).data(:).sdEffect]];
                 end
             end
         end

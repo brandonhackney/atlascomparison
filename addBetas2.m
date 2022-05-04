@@ -8,6 +8,9 @@ function output = addBetas2(input,pred)
 % input: a single hemisphere of a single task's data structure
 % pred: predictor matrix, e.g. from an SDM file
 
+% Suppress warnings for nearly-singular matrices
+% warning('off','MATLAB:nearlySingularMatrix')
+
 for roi = 1:length(input)
     % Calculate beta based on timeseries and predictors
     % betaHat = inv(pred'*pred)*pred'*parcelTS;
@@ -18,4 +21,5 @@ for roi = 1:length(input)
 end % roi
 
 output = input;
+% warning('on','MATLAB:nearlySingularMatrix')
 end

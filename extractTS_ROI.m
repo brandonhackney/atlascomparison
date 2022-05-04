@@ -45,6 +45,21 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
     bv(2).template = xff(strcat('template_rh_',atlasName,'.annot.poi'));
     cd(surfDir)
     
+    % Truncate POI for later
+    for i = 1:2
+        poi = bv(i).poi.POI;
+        templ = bv(i).template.POI;
+        shortList = {templ.Name};
+        longList = {poi.Name};
+        truncPOI = bv(i).poi;
+        truncPOI.POI = bv(i).poi.POI(ismember(longList,shortList));
+        truncPOI.NrOfPOIs = bv(i).template.NrOfPOIs;
+        newName = strcat(subj,'_',bv(i).hem,'_',atlasName,'_trunc.annot.poi');
+        truncPOI.SaveAs(char(newName));
+%         truncPOI.ClearObject; % is this causing bv(h).poi to disappear?
+    end
+    clear poi templ shortList longList truncPOI
+    
     %% Get list of SDM and VTC files
     cd(subjDir);
     sdmList = dir('*.sdm');
@@ -60,18 +75,26 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
     fprintf(1,'\tFound %i MTC files.\n',length(mtcList));
     lhCount = 0;
     rhCount = 0;
+    pfile = 0;
     for file = 1:length(mtcList)
         mtc = xff(mtcList(file).name);
         nameParts = strsplit(mtcList(file).name,'_');
         % subID, sess, task, run, ... hem.mtc
         session = nameParts{2};
-        task = nameParts{3};
+        otask = nameParts{3};
         run = nameParts{4};
         
-        if strcmp(task,'RestingState') || strcmp(task,'BowtieRetino') %|| strcmp(task,'DynamicFaces')
-            fprintf(1,'\tSkipping file %s\n',mtcList(file).name)
+        if strcmp(otask,'RestingState') %|| strcmp(otask,'BowtieRetino') %|| strcmp(task,'DynamicFaces')
+            fprintf(1,'\tSkipping task %s\n',mtcList(file).name)
             cd(subjDir) % just in case
             continue
+        elseif strcmp(otask,'ComboLocal')
+            contrastList = {'ComboLocal','Objects'};
+        elseif strcmp(otask,'DynamicFaces')
+            contrastList = {'DynamicFaces','Motion-Faces'};
+        else
+            contrastList = {otask};
+            task = otask;
         end
         
         hemStr = nameParts{end}(1:2); % to strip out the file extension
@@ -85,14 +108,18 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
             tempCount = rhCount;
             hem = 2;
         end
-        mtcPile(file).data = mtc;
-        mtcPile(file).session = session;
-        mtcPile(file).task = task;
-            taskStack{file} = task;
-        mtcPile(file).run = run;
-        mtcPile(file).hem = hemStr;
-        mtcPile(file).filename = mtcList(file).name;
-        mtcPile(file).path = mtcList(file).folder;
+        for x = 1:length(contrastList)
+            % Allow reuse of an MTC but with a different contrast
+            task = contrastList{x};
+        pfile = pfile + 1; % pfile for mtcPile, file for mtcList
+        mtcPile(pfile).data = mtc;
+        mtcPile(pfile).session = session;
+        mtcPile(pfile).task = task;
+            taskStack{pfile} = task;
+        mtcPile(pfile).run = run;
+        mtcPile(pfile).hem = hemStr;
+        mtcPile(pfile).filename = mtcList(file).name;
+        mtcPile(pfile).path = mtcList(file).folder;
         
         %%% Find the SDMs and save predictors
         % Do this here while the MTC is still in memory because
@@ -100,15 +127,15 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
         % The 3DMC SDM filename is based on the VTC/MTC filename,
         % But since VTClist is by session while mtcPile is by task,
         % Find the index from vtcList.name that contains task && run.
-        index = find(contains(vtcCell,task) & contains(vtcCell,run));
+        index = find(contains(vtcCell,otask) & contains(vtcCell,run));
 
 %         if strcmp(nameParts{end},'lh.mtc') % account for 2 per sdm
 %             index = (file + 1)/2;
 %         else
 %             index = file/2;
 %         end
-        mtcPile(file).VTCpath = strcat(vtcList(index).folder,'/',vtcList(index).name);
-        filePath = mtcPile(file).data.LinkedPRTFile;
+        mtcPile(pfile).VTCpath = strcat(vtcList(index).folder,'/',vtcList(index).name);
+        filePath = mtcPile(pfile).data.LinkedPRTFile;
         if strcmp(filePath,'')
             % MTCs made in RAWork don't have PRTs attached :(
             % Steal them from the VTC instead, since those are untouched
@@ -121,8 +148,8 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
                 % and without an SDM, there's no analysis.
                 fprintf(1,'\tSkipping file with no PRT: %s\n',mtcList(file).name);
                 cd(subjDir);
-                mtcPile(file).pred = [];
-                mtcPile(file).motionpred = [];
+                mtcPile(pfile).pred = [];
+                mtcPile(pfile).motionpred = [];
                 continue
             end
             if strcmp(filePath(end-4:end),'.prt') || strcmp(filePath(end-3:end),'.prt')
@@ -139,8 +166,8 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
             if exist(filePath,'file')
 
                 sdm = xff(filePath);
-                mtcPile(file).pred = sdm.SDMMatrix;
-                mtcPile(file).predpath = filePath;
+                mtcPile(pfile).pred = sdm.SDMMatrix;
+                mtcPile(pfile).predpath = filePath;
             else
                 fprintf(1,'\tWARNING! SDM not found: %s\n',filePath);
                 continue
@@ -148,8 +175,8 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
             filePath = vtcList(index).name;
             filePath = [filePath(1:strfind(filePath,'3DMC')+3),'.sdm'];
             sdmMot = xff(filePath);
-            mtcPile(file).motionpred = sdmMot.SDMMatrix;
-            mtcPile(file).motionpath = filePath;
+            mtcPile(pfile).motionpred = sdmMot.SDMMatrix;
+            mtcPile(pfile).motionpath = filePath;
         else % if you DO have filepath from an attached PRT
             if contains(filePath,'RAWork')
                 % Point it to data2 instead
@@ -157,8 +184,8 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
             end
             filePath = [filePath(1:end-4) '.sdm'];
             sdm = xff(filePath);
-            mtcPile(file).pred = sdm.SDMMatrix;
-            mtcPile(file).predpath = filePath;
+            mtcPile(pfile).pred = sdm.SDMMatrix;
+            mtcPile(pfile).predpath = filePath;
 
             filePath = vtcList(index).name;
             if ~exist([filePath(1:strfind(filePath,'3DMC')+3),'.sdm'],'file')
@@ -167,14 +194,20 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
                 filePath = [filePath(1:strfind(filePath,'3DMC')+3),'.sdm'];
             end
             sdmMot = xff(filePath);
-            mtcPile(file).motionpred = sdmMot.SDMMatrix;
-            mtcPile(file).motionpath = filePath;
+            mtcPile(pfile).motionpred = sdmMot.SDMMatrix;
+            mtcPile(pfile).motionpath = filePath;
 
-        end
+        end % if filepath is empty
             sdm.ClearObject;
             sdmMot.ClearObject;
             clear filePath
-    end
+            if x == length(contrastList)
+                mtcPile(pfile).finalUse = true;
+            else
+                mtcPile(pfile).finalUse = false;
+            end
+        end % for x in contrastList
+    end % for file in mtcList
 
     % Get counts/lists for future structure
     % remove empty elements of taskStack and mtcPile
@@ -231,7 +264,9 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
         organized.hem(h).task(taskID).run(runNum).motionpath = mtcPile(file).motionpath;
         
         clear goddamnPoi
-        mtcPile(file).data.ClearObject;
+        if mtcPile(file).finalUse == true
+            mtcPile(file).data.ClearObject;
+        end
         output.task(taskID).mtcList = rmfield(output.task(taskID).mtcList,'data'); % don't export the xff data
 
         % This is the last point the original MTC file is used.
@@ -252,7 +287,7 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
     clear xW
     fprintf(1,'\tConcatenating runs, calculating betas, generating stats...');
     
-    % Concatenate runs by task
+    %% Concatenate runs by task
     for h = 1:2
         if h == 1
             hem = 'lh';
@@ -280,32 +315,47 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
                 end
                 % Add predictors once per run (ie not for every ROI)
                 try
-                tempPred = [tempPred;organized.hem(h).task(taskID).run(runNum).pred];
-                predpaths{runNum,1} = organized.hem(h).task(taskID).run(runNum).predpath;
+                    tempPred = [tempPred;organized.hem(h).task(taskID).run(runNum).pred];
+                    predpaths{runNum,1} = organized.hem(h).task(taskID).run(runNum).predpath;
                 catch
-                    error('Failed pred cat for hem = %s task = %s run = %s',h,taskId,runNum);
+                    error('Failed pred cat for hem = %s task = %s run = %i',hem,taskList{taskID},runNum);
                 end
                 temp3dmc = [temp3dmc;organized.hem(h).task(taskID).run(runNum).motionpred];
                 motionpaths{runNum,1} = organized.hem(h).task(taskID).run(runNum).motionpath;
             end
+            
+        % Convert scalar run number column to many binary columns
+        % Otherwise you're saying you expect run 1 to be lower etc
+        cd(homeDir)
+        runVec = tempPred(:,end);
+        tempPred = convertRunCol(tempPred);
+            
         % Export labeled within-task aggregated timecourse
         output.task(taskID).hem(h).data = tempData;
         output.task(taskID).pred = tempPred;
         output.task(taskID).motionpred = temp3dmc;
         output.task(taskID).predpath = predpaths;
         output.task(taskID).motionpath = motionpaths;
-        clear predpaths motionpaths
+        output.task(taskID).runNum = runVec;
+        clear predpaths motionpaths runVec
         
         % Remember that at this stage, you're inside a per-hemisphere loop
         % Calculate betas
-        cd(homeDir)
         output.task(taskID).hem(h).data = addBetas2(tempData, tempPred);
         % Recolor parcels based on betas
             % Determine which column index to use for SD calculation
         [colInd,negInd] = getConditionFromFilename(taskList{taskID});
-        [output.task(taskID).hem(h).data,calcName] = statSD(output.task(taskID).hem(h).data,colInd,negInd);
+        [output.task(taskID).hem(h).data] = statSD(output.task(taskID).hem(h).data,colInd,negInd);
         % Recolor based on above calculation
-        output.task(taskID).hem(h).data = addColors(output.task(taskID).hem(h).data,calcName);
+        % Uses this weird method to slice an entire field into a struct
+       colorMap = {output.task(taskID).hem(h).data.ColorMap};
+       cm = addColors({output.task(taskID).hem(h).data.meanSDPos}, colorMap);
+        [output.task(taskID).hem(h).data.ColorMapPos] = cm{:};
+       cm = addColors({output.task(taskID).hem(h).data.meanSDNeg}, colorMap);
+        [output.task(taskID).hem(h).data.ColorMapNeg] = cm{:};
+       cm = addColors({output.task(taskID).hem(h).data.sdEffect}, colorMap);
+        [output.task(taskID).hem(h).data.ColorMap] = cm{:};
+        clear cm colorMap
         cd(surfDir)
 
         end
@@ -373,18 +423,17 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
                                 output.task(m).hem(h).data(j).ColorMap;
                             end
                         end
-                        % Label with the SD value - cut out to keep names
-                        %--
+                        % Prepend SD value to parcel label
                         if j <= length(output.task(m).hem(h).data)
                             if z == 1
                             bv(h).poi.POI(conv).Name = ...
-                            num2str(output.task(m).hem(h).data(j).meanPos);
+                            [num2str(output.task(m).hem(h).data(j).meanSDPos) ': ' bv(h).poi.POI(conv).Name];
                             elseif z == 2
                                 bv(h).poi.POI(conv).Name = ...
-                                num2str(output.task(m).hem(h).data(j).meanNeg);
+                                [num2str(output.task(m).hem(h).data(j).meanSDNeg) ': ' bv(h).poi.POI(conv).Name];
                             elseif z == 3
                                 bv(h).poi.POI(conv).Name = ...
-                                num2str(output.task(m).hem(h).data(j).glmEffect);
+                                [num2str(output.task(m).hem(h).data(j).sdEffect) ': ' bv(h).poi.POI(conv).Name];
                             end
                         end
                         %--
@@ -418,6 +467,8 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
     catch thisError
         fprintf(1,'%s didn''t work:\n',subj);
         fprintf(1,'%s: %s\n',thisError.identifier,thisError.message);
+        cd(homeDir);
+        throw(thisError)
     end
 
 

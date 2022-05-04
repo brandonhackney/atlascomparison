@@ -1,40 +1,33 @@
-function output = addColors(input,measure)
-% output = addColors(input,colInd)
+function output = addColors(values,colorMap,varargin)
+% output = addColors(values,colorMap)
 % Recolors POI vertices with gradient scaled to a new calculation
+% Uses the jet colorscheme - modify it yourself if you don't like it
 %
 % INPUTS
-% input: a data structure w/ several ROIs' worth of vertices, patterns, etc
+% values: A 1xn cell array of the values you're using, one value / cell
+% colorMap: A 1xn cell array of RGB vectors
+% NOTE: You can transform a struct into a cell array by doing {st.val}
+% (Optional) max: The maximum value you want your data scaled to
+% If this optional input is not provided, default to max(values)
 %
-% measure: string shorthand for the field your calculation is in
-%   options: 'SD' for the standard deviation in input.stdVert
-    for i = 1:3
-        switch measure
-            case 'SD'
-                if i == 1
-                    values = cell2mat({input.meanPos}');
-                elseif i == 2
-                    values = cell2mat({input.meanNeg}');
-                elseif i == 3
-                    values = cell2mat({input.glmEffect}');
-                end
-            % Add more cases as you add new measures
-            % Explicitly call the field name for the calculation's output
-        end
+%OUTPUT
+% A cell array containing RGB values based on the values provided
+% To dump this into a struct, use [struct.field] = output{:};
 
-        % Recolor the labels based on above calculation
-        tempColors = cell2mat({input.ColorMap}');
-        map = round(jet(256) * 255); % COLORMAP
-        rescaleRGB = round(values * 255 / max(values));
-        tempColors = map(rescaleRGB,:);
-        colorStruct = mat2cell(tempColors,ones([length(tempColors),1]),3);
-        if i == 1
-            [input.ColorMapPos] = colorStruct{:};
-        elseif i == 2
-            [input.ColorMapNeg] = colorStruct{:};
-        elseif i == 3
-            [input.ColorMap] = colorStruct{:};
-        end
+    values = cell2mat(values');
+    % Define the maximum value
+    if nargin > 2
+        maxv = varargin{1};
+    else
+        maxv = max(values);
     end
-    output = input;
+    % Recolor the labels based on above calculation
+    tempColors = cell2mat(colorMap');
+    map = round(jet(256) * 255); % COLORMAP
+    rescaleRGB = round(values * 255 / maxv) + 1; % avoid 0
+    tempColors = map(rescaleRGB,:);
+    colorStruct = mat2cell(tempColors,ones([length(tempColors),1]),3);
+
+    output = colorStruct;
     
 end
