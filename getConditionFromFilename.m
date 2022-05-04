@@ -1,8 +1,16 @@
 function [posInd,negInd, outID, varargout] = getConditionFromFilename(taskname)
-% [posInd,negInd, outID] = getConditionFromFilename(taskname)
+% [posInd,negInd, outID, (numConds), (ttype), (social), (motion)] = getConditionFromFilename(taskname)
 % Reads in char task name
 % Outputs arrays to index + and - conditions (for contrasting) from betas
 % outID gets used in the FC scripts, to do ...
+% OPTIONAL OUTPUTS:
+% numConds tells you the total number of conditions in the task
+% ttype tells you whether the task is considered 'social', 'motion','both, or 'control'
+% social indexes specific conditions for whole-brain FC and ...?
+% motion indexes specific conditions for whole-brain FC and ...?
+%
+% LOTS of feature creep here.
+% With this many outputs, we'd probably be better off defining a class
 
 errorFlag = 0;
 switch taskname
@@ -12,12 +20,18 @@ switch taskname
         negInd = [1,2];
         outID = 6;
         numConds = 3;
+        ttype = 'social';
+        social = 3;
+        motion = [];
     case 'Bio-Motion'
         % biological, scrambled
         posInd = 1;
         negInd = 2;
         outID = 1;
         numConds = 2;
+        ttype = 'both';
+        social = 1;
+        motion = 2;
     case 'BowtieRetino'
 %         % Fixation, Horizontal, Vertical
 %         posInd = 2;
@@ -27,6 +41,9 @@ switch taskname
         negInd = 2;
         outID = 8;
         numConds = 3;
+        ttype = 'control';
+        social = [];
+        motion = [];
     case 'ComboLocal'
         % adults, children, bodies, limbs, cars, instruments, houses, corridors, scrambled
         % Biasing for FFA, but do a second one of places vs objects
@@ -34,6 +51,9 @@ switch taskname
         negInd = [5,6,7,8];
         outID = 4;
         numConds = 9;
+        ttype = 'social';
+        social = [1,2];
+        motion = [];
     case 'DynamicFaces'
         % static face, static scrambled, dynamic face, dynamic scrambled
         % Can do dynamic vs static, face vs scramble, or dynamic face vs dynamic scramble
@@ -42,6 +62,9 @@ switch taskname
         negInd = 4;
         outID = 3;
         numConds = 4;
+        ttype = 'both';
+        social = [3];
+        motion = 4;
     case 'Motion-Faces'
        % static face, static scrambled, dynamic face, dynamic scrambled
         % Can do dynamic vs static, face vs scramble, or dynamic face vs dynamic scramble
@@ -49,13 +72,19 @@ switch taskname
 %         negInd = [1,2,4];
         negInd = 1;
         outID = 9;
-        numConds = 4; 
+        numConds = 4;
+        ttype = 'motion';
+        social = [1,3];
+        motion = [];
     case 'MTLocal'
         % static, motion
         posInd = 2;
         negInd = 1;
         outID = 7;
         numConds = 2;
+        ttype = 'motion';
+        social = [];
+        motion = 2;
     case 'Objects'
         % adults, children, bodies, limbs, cars, instruments, houses, corridors, scrambled
         % This is ComboLocal with a secondary contrast
@@ -63,25 +92,36 @@ switch taskname
         negInd = [7,8];
         outID = 10;
         numConds = 9;
+        ttype = 'control';
+        social = [];
+        motion = [];
     case 'SocialLocal'
         % social, mechanical
         posInd = 1;
         negInd = 2;
         outID = 2;
         numConds = 2;
+        ttype = 'both';
+        social = 1;
+        motion = 2;
     case 'Speech'
         % speech, scn
         posInd = 1;
         negInd = 2;
         outID = 11;
         numConds = 2;
+        ttype = 'control';
+        social = [];
+        motion = [];
     case 'ToM'
         % belief, photo
-        % check with john
         posInd = 1;
         negInd = 2;
         outID = 5;
         numConds = 2;
+        ttype = 'social';
+        social = 1;
+        motion = [];
     otherwise
         errorFlag = 1;
 end
@@ -94,6 +134,15 @@ end
 
 if nargout > 3
     varargout{1} = numConds;
+end
+if nargout > 4
+    varargout{2} = ttype;
+end
+if nargout > 5
+    varargout{3} = social;
+end
+if nargout > 6
+    varargout{4} = motion;
 end
 
 end

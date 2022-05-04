@@ -45,6 +45,21 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
     bv(2).template = xff(strcat('template_rh_',atlasName,'.annot.poi'));
     cd(surfDir)
     
+    % Truncate POI for later
+    for i = 1:2
+        poi = bv(i).poi.POI;
+        templ = bv(i).template.POI;
+        shortList = {templ.Name};
+        longList = {poi.Name};
+        truncPOI = bv(i).poi;
+        truncPOI.POI = bv(i).poi.POI(ismember(longList,shortList));
+        truncPOI.NrOfPOIs = bv(i).template.NrOfPOIs;
+        newName = strcat(subj,'_',bv(i).hem,'_',atlasName,'_trunc.annot.poi');
+        truncPOI.SaveAs(char(newName));
+%         truncPOI.ClearObject; % is this causing bv(h).poi to disappear?
+    end
+    clear poi templ shortList longList truncPOI
+    
     %% Get list of SDM and VTC files
     cd(subjDir);
     sdmList = dir('*.sdm');
@@ -303,7 +318,7 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
                     tempPred = [tempPred;organized.hem(h).task(taskID).run(runNum).pred];
                     predpaths{runNum,1} = organized.hem(h).task(taskID).run(runNum).predpath;
                 catch
-                    error('Failed pred cat for hem = %s task = %s run = %s',h,taskID,runNum);
+                    error('Failed pred cat for hem = %s task = %s run = %i',hem,taskList{taskID},runNum);
                 end
                 temp3dmc = [temp3dmc;organized.hem(h).task(taskID).run(runNum).motionpred];
                 motionpaths{runNum,1} = organized.hem(h).task(taskID).run(runNum).motionpath;
@@ -330,9 +345,17 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
         % Recolor parcels based on betas
             % Determine which column index to use for SD calculation
         [colInd,negInd] = getConditionFromFilename(taskList{taskID});
-        [output.task(taskID).hem(h).data,calcName] = statSD(output.task(taskID).hem(h).data,colInd,negInd);
+        [output.task(taskID).hem(h).data] = statSD(output.task(taskID).hem(h).data,colInd,negInd);
         % Recolor based on above calculation
-        output.task(taskID).hem(h).data = addColors(output.task(taskID).hem(h).data,calcName);
+        % Uses this weird method to slice an entire field into a struct
+       colorMap = {output.task(taskID).hem(h).data.ColorMap};
+       cm = addColors({output.task(taskID).hem(h).data.meanSDPos}, colorMap);
+        [output.task(taskID).hem(h).data.ColorMapPos] = cm{:};
+       cm = addColors({output.task(taskID).hem(h).data.meanSDNeg}, colorMap);
+        [output.task(taskID).hem(h).data.ColorMapNeg] = cm{:};
+       cm = addColors({output.task(taskID).hem(h).data.sdEffect}, colorMap);
+        [output.task(taskID).hem(h).data.ColorMap] = cm{:};
+        clear cm colorMap
         cd(surfDir)
 
         end
@@ -400,18 +423,17 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
                                 output.task(m).hem(h).data(j).ColorMap;
                             end
                         end
-                        % Label with the SD value - cut out to keep names
-                        %--
+                        % Prepend SD value to parcel label
                         if j <= length(output.task(m).hem(h).data)
                             if z == 1
                             bv(h).poi.POI(conv).Name = ...
-                            num2str(output.task(m).hem(h).data(j).meanSDPos);
+                            [num2str(output.task(m).hem(h).data(j).meanSDPos) ': ' bv(h).poi.POI(conv).Name];
                             elseif z == 2
                                 bv(h).poi.POI(conv).Name = ...
-                                num2str(output.task(m).hem(h).data(j).meanSDNeg);
+                                [num2str(output.task(m).hem(h).data(j).meanSDNeg) ': ' bv(h).poi.POI(conv).Name];
                             elseif z == 3
                                 bv(h).poi.POI(conv).Name = ...
-                                num2str(output.task(m).hem(h).data(j).sdEffect);
+                                [num2str(output.task(m).hem(h).data(j).sdEffect) ': ' bv(h).poi.POI(conv).Name];
                             end
                         end
                         %--

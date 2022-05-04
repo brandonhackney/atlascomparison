@@ -1,4 +1,4 @@
-function [input,calcName] = statSD(input,posInd,negInd)
+function [input] = statSD(input,posInd,negInd)
 % output = statSD(input,colInd)
 % Calculate SD of the betas at each vertex in condition condInd
 %
@@ -30,5 +30,4 @@ function [input,calcName] = statSD(input,posInd,negInd)
 %         input(i).medianGLM = mean(median(input(i).betaHat(posInd,:)' - input(i).betaHat(negInd,:)',2));
         input(i).medianGLM = input(i).medianPos - input(i).medianNeg;
     end
-    calcName = 'SD'; % send to addColors so it knows what to do
 end
