@@ -465,7 +465,8 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
     bv = bv([]); % clear memory
     xff(0, 'clearallobjects'); % should just be the srf and poi at this point
     catch thisError
-        fprintf(1,'%s didn''t work:\n',subj);
+        lineNum = thisError.stack(find(strcmp({thisError.stack.name},'extractTS_ROI'))).line;
+        fprintf(1,'%s didn''t work! Error on line %i:\n',subj, lineNum);
         fprintf(1,'%s: %s\n',thisError.identifier,thisError.message);
         cd(homeDir);
         throw(thisError)
