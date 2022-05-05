@@ -1,8 +1,10 @@
 function p = specifyPaths
 
 %relevant paths
-p.basePath = '/data2/2020_STS_Multitask/analysis/';
-p.baseDataPath ='/data2/2020_STS_Multitask/data/';
+p.root = '/data2/2020_STS_Multitask/';
+p.basePath = strcat(p.root, 'analysis/');
+p.baseDataPath = strcat(p.root, 'data/');
+p.backup = strcat(p.root, 'backup/');
 
 p.wbFCPath = strcat(p.basePath, 'wholebrainFC/');
 p.corrOutPath = strcat(p.wbFCPath, 'corrData/');
