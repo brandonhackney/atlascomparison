@@ -14,7 +14,8 @@ subList = [1 2 3 4 5 6 7 8 10 11]; % Update this if new data comes in
     end
 load('getFilePartsFromContrast.mat');
 numTasks = length(conditionList); % excludes RestingState
-atlasList = {'schaefer400','gordon333dil','glasser6p0','power6p0'};
+atlasList = {'gordon333dil','glasser6p0','power6p0','schaefer400',...
+    'schaefer100','schaefer200','schaefer600','schaefer800','schaefer1000'};
 %%% These need to be manually adjusted!! %%%
 
 % Paths
@@ -116,7 +117,7 @@ for m = 1:4
         end % for task
 
         % Export atlas file
-        outname = [outputdir 'Classify_' metric '_' atlasList{atlas} '_effect.mat'];
+        outname = [outputdir 'Classify_' metric '_' atlasList{atlas} '.mat'];
         save(outname, 'Data');
         fprintf(1,'\tAtlas %s exported to %s\n',atlasList{atlas},outname)
     end % for atlas

@@ -13,7 +13,7 @@ if nargin > 3
     % please use 1 for left, 2 for right
 end
 
-fList = dir(strcat(p.classifyDataPath, filesep, '*', metricID, '*', atlasID, '*mat'));
+fList = dir(strcat(p.classifyDataPath, filesep, '*', metricID, '*', atlasID, '.mat'));
 if length(fList) ==  1
     load([fList.folder filesep fList.name]);
     NumSubs = size(Data.subID, 1);
@@ -55,8 +55,13 @@ if length(fList) ==  1
         
         
         %4. Test trained classifier
-        [predicted_label, accuracy, prob_est] = svmpredict(testLabels, testData, svmStruct, testData);
-        score(:, i) = accuracy(1);
+%         [predicted_label, accuracy, prob_est] = svmpredict(testLabels, testData, svmStruct, testData);
+        [predicted_label, accuracy, prob_est] = svmpredict(testLabels, testData, svmStruct);
+        try
+            score(:, i) = accuracy(1);
+        catch
+            error('score has size %i while accuracy has size %i',size(score), size(accuracy))
+        end
         
         
         

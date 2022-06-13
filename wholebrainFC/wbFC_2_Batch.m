@@ -5,7 +5,7 @@ BasePath = '/data2/2020_STS_Multitask/analysis/';
 subIDList = {'STS1' 'STS2' 'STS3' 'STS4' 'STS5' 'STS6' , 'STS7' 'STS8', 'STS10', 'STS11'}; 
 % taskList = {'Bio-Motion', 'ComboLocal','DynamicFaces', 'MTLocal', 'SocialLocal', 'AVLocal', 'Speech', 'ToM'};
 taskList = {'AVLocal' 'Bio-Motion' 'BowtieRetino' 'ComboLocal' 'DynamicFaces' 'Motion-Faces' 'MTLocal' 'Objects' 'SocialLocal' 'Speech' 'ToM'};
-atlasList = {'gordon333dil', 'power6p0' 'schaefer400'};
+atlasList = {'glasser6p0', 'gordon333dil', 'power6p0' 'schaefer400'};
 
 
 % if exist('CorrData', 'file')

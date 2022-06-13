@@ -1,26 +1,40 @@
-% clear; clc;
-% close all;
+clear; clc;
+close all;
 % add root to path
 p = specifyPaths;
 % addpath(p.classifyPath);
 % addpath(p.basePath);
 
-figLabels = {'Gl', 'Go', 'P', 'S'};
-atlasID = {'glasser6p0', 'gordon333dil', 'power6p0', 'schaefer400'};
+% figLabels = {'Gl', 'Go', 'P', 'S'};
+% atlasname = {'Glasser', 'Gordon', 'Power', 'Schaefer'};
+% atlasID = {'glasser6p0', 'gordon333dil', 'power6p0', 'schaefer400'};
 
-condID = 'social';
+figLabels = {'100','200','400','600','800','1k'};
+atlasname = {'Schaefer 100', 'Schaefer 200', 'Schaefer 400', 'Schaefer 600', 'Schaefer 800', 'Schaefer 1,000'};
+atlasID = {'schaefer100','schaefer200','schaefer400','schaefer600','schaefer800','schaefer1000'};
+
+condID = 'all';
 % consider looping instead. would need to loop figures as well.
 switch condID
     case 'social'
-        metricID = {'wbFC_positive','meanB','overlap','stdB','meanPosB'};% 'meanFC_social', 
+        metricID = {'meanB','overlap','stdB','meanPosB'};%  'meanFC_social', wbFC_Social
+        mFig = {'Contrast', 'Spatial Agreement', 'Inhomogeneity', 'Activation'};
+%         metricID = {'omnibus'};
+%         mFig = {'All Metrics'};
     case 'motion'
-        metricID = {'wbFC_negative','meanB','overlap','stdB','meanNegB'}; % 'meanFC_control-motion',
+        metricID = {'meanB','overlap','stdB','meanNegB'}; %  'meanFC_control-motion',wbFC_Motion
+        mFig = {'Contrast', 'Spatial Agreement', 'Inhomogeneity', 'Activation'};
     case 'control'
         % find out what to put here
         % aiming for Bowtie, Objects, Speech?
+        metricID = {'meanB','overlap','stdB','meanPosB'};
+        mFig = {'Contrast', 'Spatial Agreement', 'Inhomogeneity', 'Activation'};
     case 'all'
         % See if you also care about meanFC?
-        metricID = {'wbFC_positive','wbFC_negative','meanB', 'stdB', 'meanPosB', 'overlap'}; % {'wbFC_positive'}
+        metricID = {'meanB', 'stdB', 'meanPosB', 'overlap'}; % {'wbFC_all'}
+        mFig = {'Contrast', 'Inhomogeneity', 'Activation', 'Spatial Agreement'};
+%         metricID = {'omnibus'};
+%         mFig = {'All Metrics'};
     otherwise
         error = 'Incorrect condID. Pick from social, motion, control, or all.';
 end
@@ -49,7 +63,7 @@ for m = 1:size(metricID, 2)
    % Generate boxplots comparing classification accuracies by metric
    subplot(1, size(metricID, 2), m), boxplot(squeeze(score(m, :, :, h))); 
    xticklabels(figLabels);
-   title(strrep(metricID{m},'_',' '));
+   title(strrep(mFig{m},'_',' '));
    ylim([-5,105]);
    yticks([0:10:100]);
 
@@ -62,8 +76,11 @@ end
 %
 %... or flatten to 7x4 by averaging dim2 out (bc it's the folds, not subs)
 % pre = squeeze(mean(score(:,:,:,h),2));
-
-pre = permute(squeeze(score(:,:,:,h)),[2 1 3]); % transpose each page
+if size(score,1) == 1 % if you only plug one metric in
+    pre = permute(score(:,:,:,h),[2 1 3]);
+else
+    pre = permute(squeeze(score(:,:,:,h)),[2 1 3]); % transpose each page
+end
 anovData = reshape(permute(pre,[1 3 2]), size(pre,1) * size(pre,3),size(pre,2));
 [pval,tbl,stats] = anova2(anovData,size(score,2));
     tbl{2,1} = 'Metric';
@@ -90,18 +107,40 @@ figure()
         for k = 1:a
         g = k + (j-1)*a;
         subplot(m,a,g)
-            imagesc(mean(confMats{j,k,h},3));
-            title(sprintf('%s, Metric = %s, Atlas = %s', hem, strrep(metricID{j},'_',' '),atlasID{k}));
-            xticks(1:length(taskNames)); yticks(1:length(taskNames));
+            imagesc(mean(confMats{j,k,h},3),[0 1]);
+            title(sprintf('%s, %s for %s', hem, strrep(mFig{j},'_',' '),atlasname{k}));
+            xticks(1:length(taskList{j})); yticks(1:length(taskList{j}));
             xticklabels(taskList{j});
             yticklabels(taskList{j});
             xtickangle(45);
             xlabel('Predicted');
             ylabel('Data');
-            colorbar;
+            caxis([0 1]);
+%             colorbar;
         end % for k
     end % for j
     clear g j k;
+% end % for h
+
+% smaller confusion matrix grid, for just one metric (pick meanB)
+% figure()
+%     for j = 1 % assuming metric 1 is meanB
+%         for k = 1:a
+%         g = k + (j-1)*a;
+%         subplot(a/2,a/2,k)
+%             imagesc(mean(confMats{j,k,h},3),[0 1]);
+%             title(sprintf('%s, %s for %s', hem, strrep(mFig{j},'_',' '),atlasname{k}));
+%             xticks(1:length(taskList{j})); yticks(1:length(taskList{j}));
+%             xticklabels(taskList{j});
+%             yticklabels(taskList{j});
+%             xtickangle(45);
+%             xlabel('Predicted');
+%             ylabel('Data');
+%             caxis([0 1]);
+%             colorbar;
+%         end % for k
+%     end % for j
+%     clear g j k;
 end % for h
 
 % % Generate a bar graph comparing classification accuracy between atlases

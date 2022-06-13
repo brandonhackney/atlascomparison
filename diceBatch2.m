@@ -8,7 +8,8 @@
 % Setup
 subList = [1 2 3 4 5 6 7 8 10 11]; % array of subject numbers
 
-atlasList = {'schaefer400','glasser6p0','gordon333dil','power6p0'}; % cell array of atlas names
+% atlasList = {'schaefer400','glasser6p0','gordon333dil','power6p0'}; % cell array of atlas names
+atlasList = {'schaefer100','schaefer200','schaefer400','schaefer600','schaefer800','schaefer1000'};
 homedir = pwd;
 fprintf(1,'\n\nStarting Dice Coefficient calculations...')
 
@@ -17,7 +18,7 @@ for a = 1:length(atlasList)
     fprintf(1,'Atlas %s:\n',atlas)
     for s = 1:length(subList)
         fprintf(1,'Subject %i:\n',subList(s))
-        fname = [homedir filesep 'class' filesep 'data' filesep 'Classify_meanB_' atlas '_effect.mat'];
+        fname = [homedir filesep 'class' filesep 'data' filesep 'Classify_meanB_' atlas '.mat'];
         load(fname)
         load([homedir filesep 'ROIs' filesep 'GLM' filesep 'STS' num2str(subList(s)) '_GLMs_' atlas '.mat']);
         if s == 1

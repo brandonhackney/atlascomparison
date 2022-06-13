@@ -1,5 +1,5 @@
 function [posInd,negInd, outID, varargout] = getConditionFromFilename(taskname)
-% [posInd,negInd, outID, (numConds), (ttype), (social), (motion)] = getConditionFromFilename(taskname)
+% [posInd,negInd, outID, (numConds), (ttype), (social), (motion), (control)] = getConditionFromFilename(taskname)
 % Reads in char task name
 % Outputs arrays to index + and - conditions (for contrasting) from betas
 % outID gets used in the FC scripts, to do ...
@@ -11,6 +11,7 @@ function [posInd,negInd, outID, varargout] = getConditionFromFilename(taskname)
 %
 % LOTS of feature creep here.
 % With this many outputs, we'd probably be better off defining a class
+% These are all just unchanging properties of each task - no calculations
 
 errorFlag = 0;
 switch taskname
@@ -23,6 +24,7 @@ switch taskname
         ttype = 'social';
         social = 3;
         motion = [];
+        control = [];
     case 'Bio-Motion'
         % biological, scrambled
         posInd = 1;
@@ -32,6 +34,7 @@ switch taskname
         ttype = 'both';
         social = 1;
         motion = 2;
+        control = [];
     case 'BowtieRetino'
 %         % Fixation, Horizontal, Vertical
 %         posInd = 2;
@@ -44,6 +47,7 @@ switch taskname
         ttype = 'control';
         social = [];
         motion = [];
+        control = 1;
     case 'ComboLocal'
         % adults, children, bodies, limbs, cars, instruments, houses, corridors, scrambled
         % Biasing for FFA, but do a second one of places vs objects
@@ -54,6 +58,7 @@ switch taskname
         ttype = 'social';
         social = [1,2];
         motion = [];
+        control = [];
     case 'DynamicFaces'
         % static face, static scrambled, dynamic face, dynamic scrambled
         % Can do dynamic vs static, face vs scramble, or dynamic face vs dynamic scramble
@@ -65,6 +70,7 @@ switch taskname
         ttype = 'both';
         social = [3];
         motion = 4;
+        control = [];
     case 'Motion-Faces'
        % static face, static scrambled, dynamic face, dynamic scrambled
         % Can do dynamic vs static, face vs scramble, or dynamic face vs dynamic scramble
@@ -74,8 +80,9 @@ switch taskname
         outID = 9;
         numConds = 4;
         ttype = 'motion';
-        social = [1,3];
+        social = []; % bc it's the same as DynamicFaces, so skip for classification
         motion = [];
+        control = [];
     case 'MTLocal'
         % static, motion
         posInd = 2;
@@ -85,6 +92,7 @@ switch taskname
         ttype = 'motion';
         social = [];
         motion = 2;
+        control = [];
     case 'Objects'
         % adults, children, bodies, limbs, cars, instruments, houses, corridors, scrambled
         % This is ComboLocal with a secondary contrast
@@ -95,6 +103,7 @@ switch taskname
         ttype = 'control';
         social = [];
         motion = [];
+        control = posInd;
     case 'SocialLocal'
         % social, mechanical
         posInd = 1;
@@ -104,6 +113,7 @@ switch taskname
         ttype = 'both';
         social = 1;
         motion = 2;
+        control = [];
     case 'Speech'
         % speech, scn
         posInd = 1;
@@ -113,6 +123,7 @@ switch taskname
         ttype = 'control';
         social = [];
         motion = [];
+        control = posInd;
     case 'ToM'
         % belief, photo
         posInd = 1;
@@ -122,6 +133,7 @@ switch taskname
         ttype = 'social';
         social = 1;
         motion = [];
+        control = [];
     otherwise
         errorFlag = 1;
 end
@@ -143,6 +155,9 @@ if nargout > 5
 end
 if nargout > 6
     varargout{4} = motion;
+end
+if nargout > 7
+    varargout{5} = control;
 end
 
 end

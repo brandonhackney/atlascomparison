@@ -8,7 +8,7 @@ function [isused, usednames, varargout] = taskTypeConv(taskType, taskList, numSu
 z = whos('taskList');
 
 if strcmp(z.class,'cell')
-    numTasks = size(taskList,2);
+    numTasks = size(taskList,1);  % watch this one
 elseif strcmp(z.class,'char')
     numTasks = size(taskList,1);
 end
