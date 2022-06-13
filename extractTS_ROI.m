@@ -111,83 +111,80 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
         for x = 1:length(contrastList)
             % Allow reuse of an MTC but with a different contrast
             task = contrastList{x};
-        pfile = pfile + 1; % pfile for mtcPile, file for mtcList
-        mtcPile(pfile).data = mtc;
-        mtcPile(pfile).session = session;
-        mtcPile(pfile).task = task;
-            taskStack{pfile} = task;
-        mtcPile(pfile).run = run;
-        mtcPile(pfile).hem = hemStr;
-        mtcPile(pfile).filename = mtcList(file).name;
-        mtcPile(pfile).path = mtcList(file).folder;
-        
-        %%% Find the SDMs and save predictors
-        % Do this here while the MTC is still in memory because
-        % The normal SDM filename should be the same as the MTC's PRT.
-        % The 3DMC SDM filename is based on the VTC/MTC filename,
-        % But since VTClist is by session while mtcPile is by task,
-        % Find the index from vtcList.name that contains task && run.
-        index = find(contains(vtcCell,otask) & contains(vtcCell,run));
+            pfile = pfile + 1; % pfile for mtcPile, file for mtcList
+            mtcPile(pfile).data = mtc;
+            mtcPile(pfile).session = session;
+            mtcPile(pfile).task = task;
+                taskStack{pfile} = task;
+            mtcPile(pfile).run = run;
+            mtcPile(pfile).hem = hemStr;
+            mtcPile(pfile).filename = mtcList(file).name;
+            mtcPile(pfile).path = mtcList(file).folder;
 
-%         if strcmp(nameParts{end},'lh.mtc') % account for 2 per sdm
-%             index = (file + 1)/2;
-%         else
-%             index = file/2;
-%         end
-        mtcPile(pfile).VTCpath = strcat(vtcList(index).folder,'/',vtcList(index).name);
-        filePath = mtcPile(pfile).data.LinkedPRTFile;
-        if strcmp(filePath,'')
-            % MTCs made in RAWork don't have PRTs attached :(
-            % Steal them from the VTC instead, since those are untouched
-            vtc = xff(vtcList(index).name);
-            filePath = vtc.NameOfLinkedPRT;
-            vtc.ClearObject; % save memory
-            if isempty(filePath)
-                % If there's no PRT attached to the VTC, then skip.
-                % There can't be an SDM without a PRT,
-                % and without an SDM, there's no analysis.
-                fprintf(1,'\tSkipping file with no PRT: %s\n',mtcList(file).name);
-                cd(subjDir);
-                mtcPile(pfile).pred = [];
-                mtcPile(pfile).motionpred = [];
-                continue
-            end
-            if strcmp(filePath(end-4:end),'.prt') || strcmp(filePath(end-3:end),'.prt')
+            %%% Find the SDMs and save predictors
+            % Do this here while the MTC is still in memory because
+            % The normal SDM filename should be the same as the MTC's PRT.
+            % The 3DMC SDM filename is based on the VTC/MTC filename,
+            % But since VTClist is by session while mtcPile is by task,
+            % Find the index from vtcList.name that contains task && run.
+            index = find(contains(vtcCell,otask) & contains(vtcCell,run));
+
+    %         if strcmp(nameParts{end},'lh.mtc') % account for 2 per sdm
+    %             index = (file + 1)/2;
+    %         else
+    %             index = file/2;
+    %         end
+            mtcPile(pfile).VTCpath = strcat(vtcList(index).folder,'/',vtcList(index).name);
+            filePath = mtcPile(pfile).data.LinkedPRTFile;
+            if strcmp(filePath,'')
+                % MTCs made in RAWork don't have PRTs attached :(
+                % Steal them from the VTC instead, since those are untouched
+                vtc = xff(vtcList(index).name);
+                filePath = vtc.NameOfLinkedPRT;
+                vtc.ClearObject; % save memory
+                if isempty(filePath)
+                    % If there's no PRT attached to the VTC, then skip.
+                    % There can't be an SDM without a PRT,
+                    % and without an SDM, there's no analysis.
+                    fprintf(1,'\tSkipping file with no PRT: %s\n',mtcList(file).name);
+                    cd(subjDir);
+                    mtcPile(pfile).pred = [];
+                    mtcPile(pfile).motionpred = [];
+                    continue
+                end
+                if strcmp(filePath(end-4:end),'.prt') || strcmp(filePath(end-3:end),'.prt')
+                    filePath = [filePath(1:end-4) '.sdm'];
+                else
+                    % account for oddball case where no extension on PRT
+                    filePath = [filePath '.sdm'];
+                end
+                fprintf(1,'\tAssuming %s goes with %s\n',filePath,mtcList(file).name);
+    %             filePath = vtcList(index).name;
+    %             filePath = [filePath(1:strfind(filePath,'3DMC')-2),'.sdm'];
+                % At this point, STS9 has only 3DMC sdms (ie no regular ones)
+                % Let the script run by spitting out a warning.
+                if ~exist(filePath,'file')
+                    fprintf(1,'\tWARNING! SDM not found: %s\n',filePath);
+                    continue
+                end
+            else % if you DO have filepath from an attached PRT
+
                 filePath = [filePath(1:end-4) '.sdm'];
-            else
-                % account for oddball case where no extension on PRT
-                filePath = [filePath '.sdm'];
-            end
-            fprintf(1,'\tAssuming %s goes with %s\n',filePath,mtcList(file).name);
-%             filePath = vtcList(index).name;
-%             filePath = [filePath(1:strfind(filePath,'3DMC')-2),'.sdm'];
-            % At this point, STS9 has only 3DMC sdms (ie no regular ones)
-            % Let the script run by spitting out a warning.
-            if exist(filePath,'file')
 
-                sdm = xff(filePath);
-                mtcPile(pfile).pred = sdm.SDMMatrix;
-                mtcPile(pfile).predpath = filePath;
-            else
-                fprintf(1,'\tWARNING! SDM not found: %s\n',filePath);
-                continue
-            end
-            filePath = vtcList(index).name;
-            filePath = [filePath(1:strfind(filePath,'3DMC')+3),'.sdm'];
-            sdmMot = xff(filePath);
-            mtcPile(pfile).motionpred = sdmMot.SDMMatrix;
-            mtcPile(pfile).motionpath = filePath;
-        else % if you DO have filepath from an attached PRT
-            if contains(filePath,'RAWork')
-                % Point it to data2 instead
-                filePath = [filesep,'data2',filePath(13:end)];
-            end
-            filePath = [filePath(1:end-4) '.sdm'];
+            end % if filepath is empty            
+
+            % No matter where filePath is pointing, direct it to subjDir
+            filePParts = strsplit(filePath, filesep);
+            filePath = [subjDir filesep filePParts{length(filePParts)}];
+            
+            % Finally read in the data
             sdm = xff(filePath);
             mtcPile(pfile).pred = sdm.SDMMatrix;
             mtcPile(pfile).predpath = filePath;
 
             filePath = vtcList(index).name;
+            % Get the motion correction SDM by truncating filename
+            % But if isn't in this folder, then point it to wherever the VTC was looking
             if ~exist([filePath(1:strfind(filePath,'3DMC')+3),'.sdm'],'file')
                 filePath = [vtcList(index).folder,filesep,filePath(1:strfind(filePath,'3DMC')+3),'.sdm'];
             else
@@ -197,7 +194,6 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
             mtcPile(pfile).motionpred = sdmMot.SDMMatrix;
             mtcPile(pfile).motionpath = filePath;
 
-        end % if filepath is empty
             sdm.ClearObject;
             sdmMot.ClearObject;
             clear filePath
@@ -245,7 +241,7 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
             data(j).vertices = bv(h).poi.POI(conv).Vertices;
             data(j).vertexCoord = bv(h).srf.VertexCoordinate(data(j).vertices,:);
             data(j).ColorMap = bv(h).poi.POI(conv).Color;
-            data(j).pattern = mtcPile(file).data.MTCData(:,data(j).vertices);
+            data(j).pattern = zscore(mtcPile(file).data.MTCData(:,data(j).vertices)); % note the zscoring
             data(j).conv = conv;
             
 
