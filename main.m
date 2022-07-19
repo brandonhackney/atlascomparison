@@ -7,6 +7,6 @@ function main(subjectList,atlasName)
     for i = 1:length(subjectList)
         [~] = extractTS_ROI(subjectList(i),atlasName);
     end % subject
-    generateBoxplots(subjectList,atlasName);
+%     generateBoxplots(subjectList,atlasName);
 fprintf(1,'\nJob''s finished!\n');
 end

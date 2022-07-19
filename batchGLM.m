@@ -1,13 +1,14 @@
-function output = batchGLM(subList)
+function output = batchGLM(subList, atlasList)
 % Wrapper function to calculate multi-run GLMs
-% (likely going to end up having multiple functions called in this block)
 % Once GLM data is extracted, threshold it and define functional regions
 % Send those ROIs to diceParcel to compare against parcels
 % Also outputs a struct with the whole-brain data per task per subject
+%
+% INPUTS:
+% subList is a vector of subject ID numbers (prefix is added within)
+% atlasList is a cell array
 
 fprintf(1,'Initializing...')
-% atlasList = {'schaefer400','glasser6p0','gordon333dil','power6p0'}; % cell array of atlas names
-atlasList = {'schaefer100','schaefer200','schaefer400','schaefer600','schaefer800','schaefer1000'};
 
 %% GET TASK INFO FOR FILENAMES
     load('getFilePartsFromContrast.mat')

@@ -1,3 +1,4 @@
+function diceBatch2(subList, atlasList)
 % This differs from the original diceBatch by outputting classifiable data
 % That is, the output matches the format of the other Classify_X files
 % Only a single metric is given - percentage of parcel that has GLM in it
@@ -6,10 +7,6 @@
 % And we may want to use those calculations later on
 
 % Setup
-subList = [1 2 3 4 5 6 7 8 10 11]; % array of subject numbers
-
-% atlasList = {'schaefer400','glasser6p0','gordon333dil','power6p0'}; % cell array of atlas names
-atlasList = {'schaefer100','schaefer200','schaefer400','schaefer600','schaefer800','schaefer1000'};
 homedir = pwd;
 fprintf(1,'\n\nStarting Dice Coefficient calculations...')
 
@@ -49,3 +46,4 @@ for a = 1:length(atlasList)
 end % for a atlas
 
 fprintf(1,'\n\nDice Coefficients done calculating.\n\n')
+end

@@ -5,16 +5,33 @@ p = specifyPaths;
 % addpath(p.classifyPath);
 % addpath(p.basePath);
 
-% figLabels = {'Gl', 'Go', 'P', 'S'};
-% atlasname = {'Glasser', 'Gordon', 'Power', 'Schaefer'};
-% atlasID = {'glasser6p0', 'gordon333dil', 'power6p0', 'schaefer400'};
 
-figLabels = {'100','200','400','600','800','1k'};
-atlasname = {'Schaefer 100', 'Schaefer 200', 'Schaefer 400', 'Schaefer 600', 'Schaefer 800', 'Schaefer 1,000'};
-atlasID = {'schaefer100','schaefer200','schaefer400','schaefer600','schaefer800','schaefer1000'};
+% !! Set these manually !!
 
+% Pick data to compare: 'atlas', or 'res' for Schaefer resolutions
+style = 'atlas';
+
+% Pick tasks to include: 'social', 'motion', 'control', or 'all'
 condID = 'all';
-% consider looping instead. would need to loop figures as well.
+
+% Pick metrics: 'omni' for just omnibus, or 'post' for all metrics separate
+% ("post" as in post-hoc test of omnibus)
+omni = 'omni';
+
+% !! Set these manually !!
+% Maybe consider making it a function then...?
+
+switch style
+    case 'atlas'
+        figLabels = {'Gl', 'Go', 'P', 'S'};
+        atlasname = {'Glasser', 'Gordon', 'Power', 'Schaefer'};
+        atlasID = {'glasser6p0', 'gordon333dil', 'power6p0', 'schaefer400'};
+    case 'res'
+        figLabels = {'100','200','400','600','800','1k'};
+        atlasname = {'Schaefer 100', 'Schaefer 200', 'Schaefer 400', 'Schaefer 600', 'Schaefer 800', 'Schaefer 1,000'};
+        atlasID = {'schaefer100','schaefer200','schaefer400','schaefer600','schaefer800','schaefer1000'};
+end
+
 switch condID
     case 'social'
         metricID = {'meanB','overlap','stdB','meanPosB'};%  'meanFC_social', wbFC_Social
@@ -30,11 +47,17 @@ switch condID
         metricID = {'meanB','overlap','stdB','meanPosB'};
         mFig = {'Contrast', 'Spatial Agreement', 'Inhomogeneity', 'Activation'};
     case 'all'
-        % See if you also care about meanFC?
-        metricID = {'meanB', 'stdB', 'meanPosB', 'overlap'}; % {'wbFC_all'}
-        mFig = {'Contrast', 'Inhomogeneity', 'Activation', 'Spatial Agreement'};
-%         metricID = {'omnibus'};
-%         mFig = {'All Metrics'};
+        % can't have separate case for omnibus bc it's not a task type
+        % must manually switch :/
+        switch omni
+            case 'omni'
+                metricID = {'omnibus'};
+                mFig = {'All Metrics'};
+            case 'post'
+                 % Essentially post-hoc tests for omnibus
+                metricID = {'meanB', 'stdB', 'meanPosB', 'overlap', 'meanFC_noprep'};
+                mFig = {'Contrast', 'Inhomogeneity', 'Activation', 'Spatial Agreement', 'Functional Connectivity'};
+        end
     otherwise
         error = 'Incorrect condID. Pick from social, motion, control, or all.';
 end
@@ -53,7 +76,7 @@ figure; % for the boxplots below
 for m = 1:size(metricID, 2)
    for a = 1:size(atlasID, 2)
 
-       [score(m, :, a, h), confMats{m,a,h}, taskNames] = atlasClassify(atlasID{a}, metricID{m}, condID, h);
+       [score(m, :, a, h), confMats{m,a,h}, taskNames,truLab{m,a,h},prdLab{m,a,h}] = atlasClassify(atlasID{a}, metricID{m}, condID, h);
        if a == 1
            taskList{m} = taskNames;
        end
@@ -66,6 +89,9 @@ for m = 1:size(metricID, 2)
    title(strrep(mFig{m},'_',' '));
    ylim([-5,105]);
    yticks([0:10:100]);
+   chper = 100 * (1/length(taskNames)); % chance = 1/numTasks
+   % round floating-point to 2 decimals: %f.2
+   ylabel(sprintf('Classification Accuracy (chance = %.2f%%)', chper));
 
 end
 % add ANOVA code here - group by atlas and metric, look for interaction
@@ -141,7 +167,23 @@ figure()
 %         end % for k
 %     end % for j
 %     clear g j k;
+
+% Generate a confusion chart, and hierarchically cluster the tasks
+% Requires Matlab R2018b or higher
+figure()
+    for j = 1:size(metricID, 2)
+        for k = 1:a
+        g = k + (j-1)*a;
+        subplot(m,a,g)
+        cm1 = confusionchart(truLab{j,k,h}, prdLab{j,k,h});
+        sortClasses(cm1,'cluster');
+            title(sprintf('%s, %s for %s', hem, strrep(mFig{j},'_',' '),atlasname{k}));
+        end % for k
+    end % for j
+    
+    
 end % for h
+
 
 % % Generate a bar graph comparing classification accuracy between atlases
 % % Use score, which is metric x subject x atlas

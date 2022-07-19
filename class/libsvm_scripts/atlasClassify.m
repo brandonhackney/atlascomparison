@@ -6,7 +6,8 @@ p = specifyPaths;
 % NOTE: %there is a matlab function in the stats toolbox with the same name
 % as the libsvm one. I will dynamically change the path to make sure I use
 % the correct one
-p.libsvm = '/usr/local/MATLAB/R2017a/toolbox/libsvm-3.25';
+% p.libsvm = '/usr/local/MATLAB/R2017a/toolbox/libsvm-3.25';
+p = libsvmpath(p); % this function is more dynamic than the above
 
 if nargin > 3
     hemi = varargin{1};
@@ -33,8 +34,9 @@ if length(fList) ==  1
         m = mean(data(in, :), 1); % take the mean of all the trials (but not voxels)
         data(in, :) = data(in, :) - repmat(m, length(in), 1); % subtract to center voxels around zero
     end
-    
-    
+    % preallocate vars for confusion charts
+    ptlab = [];
+    prlab = [];
     for i = 1:NumSubs %our outer fold (leave one subject out)
         
         
@@ -67,8 +69,13 @@ if length(fList) ==  1
         
         %6. Optional step: Create a confusion matrix
         conMat(:,:,i) = confusionmat(testLabels, predicted_label);
+        
+%         labs = taskConv(Data.taskNames)'; % can you just use taskNames?
+        labs = taskNames';
+        ptlab = [ptlab; labs(testLabels)];
+        prlab = [prlab; labs(predicted_label)];
         % Output task names, if asked for (for plotting above)
-        if (nargout - 2) > 0
+        if (nargout - 2) >= 1
             % ...I shouldn't have to do this? We already truncated it
 %             for t = 1:length(taskNames)
 %                 temp(t) = taskUseCheck(taskNames{t},typeName);
@@ -77,8 +84,16 @@ if length(fList) ==  1
             varargout{1} = taskNames;
         end
         
-    end
-    
+    end % for i = subject
+    % Export values for confusion charts
+        if (nargout - 2) >= 2
+            varargout{2} = ptlab; % test labels
+        end
+        if (nargout - 2) >= 3
+            varargout{3} = prlab; % predicted labels
+        end
+        
+    % Print classification accuracy
     fprintf(1, '\n\nAtlas: %s, metric: %s, Accuracy across folds:', atlasID, metricID);
     fprintf(1, '\t%0.2f', score(1, :));
     fprintf(1, '\nMean accuracy: %0.2f\n', mean(score(1, :)));

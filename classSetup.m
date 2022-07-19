@@ -1,3 +1,4 @@
+function classSetup(subList, atlasList)
 % Prepare data for classification
 % Reads in individual subject-atlas data files and combines per atlas
 % Strips out unnecesary variables so that classification data is light
@@ -5,18 +6,11 @@
 % (because there's an outer loop for task)
 
 % Key variables
-
-%%% These need to be manually adjusted!! %%%
-subList = [1 2 3 4 5 6 7 8 10 11]; % Update this if new data comes in
-    % Generate subIDs
-    for s = 1:length(subList)
-        subIDs(s,:) = pad(['STS',num2str(subList(s))],5);
-    end
-load('getFilePartsFromContrast.mat');
+for s = 1:length(subList) % gen sub IDs
+    subIDs(s,:) = pad(['STS',num2str(subList(s))],5);
+end
+load('getFilePartsFromContrast.mat'); % get list of contrasts
 numTasks = length(conditionList); % excludes RestingState
-atlasList = {'gordon333dil','glasser6p0','power6p0','schaefer400',...
-    'schaefer100','schaefer200','schaefer600','schaefer800','schaefer1000'};
-%%% These need to be manually adjusted!! %%%
 
 % Paths
 basedir = pwd;
@@ -124,4 +118,5 @@ for m = 1:4
     fprintf(1,'Metric %s done.\n',metric)
 end % for m (for metric)
 
-fprintf(1,'\n\n Job''s finished!\n')
+fprintf(1,'\n\n Finished generating classification files!\n')
+end

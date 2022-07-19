@@ -43,7 +43,7 @@ switch taskname
         posInd = 1;
         negInd = 2;
         outID = 8;
-        numConds = 3;
+        numConds = 2; %3; Emily changed to 2
         ttype = 'control';
         social = [];
         motion = [];
@@ -54,7 +54,7 @@ switch taskname
         posInd = [1,2];
         negInd = [5,6,7,8];
         outID = 4;
-        numConds = 9;
+        numConds = 9;% Emily is confused about this one but changed it back to 8
         ttype = 'social';
         social = [1,2];
         motion = [];
@@ -99,7 +99,7 @@ switch taskname
         posInd = [5,6];
         negInd = [7,8];
         outID = 10;
-        numConds = 9;
+        numConds = 9;% 
         ttype = 'control';
         social = [];
         motion = [];
