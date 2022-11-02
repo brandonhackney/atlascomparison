@@ -1,9 +1,8 @@
 function generateOmnibus(atlasList)
 % INPUTS:
 % atlasList is a cell array of atlas names
-taskList = {'AVLocal' 'Bio-Motion' 'BowtieRetino' 'ComboLocal' 'DynamicFaces' 'MTLocal' 'Objects' 'SocialLocal' 'Speech' 'ToM'};
-metricList = {'meanB', 'stdB', 'meanPosB', 'overlap','meanFC_noprep'}; 
-skipT = {'Motion-Faces'};%
+taskList = {'AVLocal' 'Bio-Motion' 'BowtieRetino' 'ComboLocal' 'DynamicFaces' 'Motion-Faces' 'MTLocal' 'Objects' 'SocialLocal' 'Speech' 'ToM'};
+metricList = {'meanB', 'stdB', 'meanPosB', 'overlap', 'stdFC'};
 
 fprintf(1,'Aggregating all classification data into one mega file\n\n')
 
@@ -26,36 +25,31 @@ for a = 1:length(atlasList)
         % Find the right file
         try % appending _effect first
         fname = strjoin({'Classify',metric,atlas,'effect.mat'},'_');
-        load([fpath fname]);
+        Data = importdata([fpath fname]);
         catch
             try % excluding _effect
             fname = strjoin({'Classify',metric,[atlas,'.mat']},'_');
-            load([fpath fname]);
+            Data = importdata([fpath fname]);
             catch % give up and error out
                 error('Cannot find file for %s in %s. Exact name checked is:\n%s\n',metric,atlas,fname);
             end
         end
         
         % Strip out the char padding in task names
-        trickyDick = Data.taskNames; % whos doesn't like structs
-        fTask = whos('trickyDick');
-        if strcmp(fTask.class,'cell')
-            for i = 1:length(Data.taskNames)
-                fTskLst{i} = strtrim(Data.taskNames{i}); % strip out the padding
-            end
-        elseif strcmp(fTask.class, 'char')
-            for i = 1:size(Data.taskNames,1)
-                fTskLst{i} = strtrim(Data.taskNames(i,:));
-            end
+        [~,~,fTskLst] = taskTypeConv('all',Data.taskNames,1);
+        if m == 1
+            % hold for comparison
+            prevTaskList = fTskLst;
         end
         
         % prep to rearrange subjects in NUMERICAL order
+        % Intended to ensure #10 comes after #9 and not before #1
         % maybe unnecessary but I'm being EXTRA careful
         sss = Data.subID;
-        oldsubids = [];
-        newsubids = [];
-        subIDs = [];
-        subout = [];
+        oldsubids = struct('ID',{},'num',[]);
+        newsubids = zeros(1,length(sss));
+        subIDs = cell([1,length(sss)]);
+        subout = '';
         for os = 1:size(sss,1)
             oldsubids(os).ID = strtrim(sss(os,:));
             q = strsplit(oldsubids(os).ID,'STS');
@@ -67,41 +61,31 @@ for a = 1:length(atlasList)
             subout(ns,:) = pad(subIDs{ns},5);
         end
         
+        % Rearrange data into new sorted order set above
         x(1).data = []; % temp temp - reset for each metric
         x(2).data = [];
         labels(1).l = []; % only need once but this goes each time
         labels(2).l = [];
-        for t = 1:length(taskList)
-            task = taskList{t};
-            oldTi = find(contains(fTskLst,task));
-            for h = 1:2
-            % get the task data from the right rows
-            inds = Data.hemi(h).labels(:,2) == oldTi;
-            tskd = Data.hemi(h).data(inds,:);
-            tskg(h).data = [];
-            % re-order by sub, to be extra careful
-            for sub = 1:size(Data.subID,1)
-                subi = strcmp({oldsubids.ID},subIDs{sub});
-                tskg(h).data(sub,:) = tskd(subi,:);
-                labels(h).l = [labels(h).l;[find(subi),t]];
-            end
-            x(h).data = [x(h).data; tskg(h).data];
-            % do stuff to x
-            
-    % skip Motion-Faces since it will be identical to Dynamic in some cases
-    % Thus need to change the task column numbering - verify it's good
-    % Make sure you have no missing values, ie tasks always in the same order
-            end % for hem
-        end % for task
+        if ~isequal(sss,subout) && ~isequal(fTskLst, prevTaskList)
+            error('Subject and/or task lists are in a different order!')
+        else
+            % If no need to rearrange, then just slice it straight in
+            x(1).data = Data.hemi(1).data;
+            x(2).data = Data.hemi(2).data;
+            labels(1).l = Data.hemi(1).labels;
+            labels(2).l = Data.hemi(2).labels;
+        end
         % horizontal concatenation of this metric
         temp(1).data = [temp(1).data x(1).data];
         temp(2).data = [temp(2).data x(2).data];
         fprintf(1,'Done.\n')
+        
+        prevTaskList = fTskLst; % update
     end % for metric
     
     % Set all outputs
     omnib.subID = subout; % make sure it's always the same
-    omnib.taskNames = char(taskList'); % char array padded to 12
+    omnib.taskNames = char(fTskLst); % char array padded to 12
     omnib.hemi(1).parcelInfo = Data.hemi(1).parcelInfo;
     omnib.hemi(2).parcelInfo = Data.hemi(2).parcelInfo;
     omnib.hemi(1).data = temp(1).data;

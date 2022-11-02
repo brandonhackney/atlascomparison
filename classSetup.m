@@ -6,11 +6,14 @@ function classSetup(subList, atlasList)
 % (because there's an outer loop for task)
 
 % Key variables
-for s = 1:length(subList) % gen sub IDs
+numSubs = length(subList);
+for s = 1:numSubs % gen sub IDs
     subIDs(s,:) = pad(['STS',num2str(subList(s))],5);
 end
 load('getFilePartsFromContrast.mat'); % get list of contrasts
 numTasks = length(conditionList); % excludes RestingState
+
+maxX = numSubs * numTasks; % counts per-task per-sub
 
 % Paths
 basedir = pwd;
@@ -44,7 +47,7 @@ for m = 1:4
         for task = 1:numTasks
             fprintf(1,'\t\tTask %i of %i\n',task,numTasks)
             goodSub = 0;
-            for sub = 1:length(subList)
+            for sub = 1:numSubs
                 % **REMEMBER** that this is an index, since we skip 9
                 
                 % Skip subs if they don't have a data file
@@ -62,7 +65,7 @@ for m = 1:4
 
                 % Load data
                 inname = [datadir 'STS' num2str(subList(sub)) '_' atlasList{atlas} '.mat'];
-                load(inname)
+                load(inname) % as Pattern
                 
                 % On first good run, insert constant info
                 if goodSub == 1 &&  ~strcmp(Pattern.task(task),'RestingState')
@@ -71,24 +74,31 @@ for m = 1:4
                 end
 
                 % Parcel info
+                numParcels = zeros([2,1]); % preallocate
                 for h = 1:2
                     % 1 = left, 2 = right
-                    for p = 1:length(Pattern.task(task).hem(h).data)
+                    Data.hemi(h).parcelInfo(sub).subID = subList(sub);
+                    
+                    numParcels(h) = length(Pattern.task(task).hem(h).data);
+                    for p = numParcels(h):-1:1 % Backwards! to pseudo-preallocate
                         % I really hate structs like why can't I just
                         % grab the whole goddamn field at once
-                    Data.hemi(h).parcelInfo(sub).subID = subList(sub);
                     Data.hemi(h).parcelInfo(sub).parcels(p).name = Pattern.task(task).hem(h).data(p).label;
                     Data.hemi(h).parcelInfo(sub).parcels(p).vertices = Pattern.task(task).hem(h).data(p).vertices;
-                    Data.hemi(h).parcelInfo(sub).parcels(p).vertexCoord = Pattern.task(task).hem(h).data(p).vertexCoord;
-                    Data.hemi(h).parcelInfo(sub).parcels(p).ColorMap = Pattern.task(task).hem(h).data(p).ColorMap;
+%                     Data.hemi(h).parcelInfo(sub).parcels(p).vertexCoord = Pattern.task(task).hem(h).data(p).vertexCoord;
+%                     Data.hemi(h).parcelInfo(sub).parcels(p).ColorMap = Pattern.task(task).hem(h).data(p).ColorMap;
                     end % for p
                 end % for h
 
                 
                 % Build data
-                x = length(subList) * (task-1) + sub; % an index
+                x = numSubs * (task-1) + sub; % an index
                     % accounts for having per subject per task order
                 for h = 1:2
+                    % preallocate, but don't overwrite each iteration
+                    if task == 1 && goodSub == 1
+                        Data.hemi(h).data = zeros([maxX,numParcels(h)]);
+                    end
                     switch metric
                         case 'meanB'
                             Data.hemi(h).data(x,:) = double([Pattern.task(task).hem(h).data(:).meanEffect]);

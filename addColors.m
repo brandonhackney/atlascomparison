@@ -15,6 +15,7 @@ function output = addColors(values,colorMap,varargin)
 % To dump this into a struct, use [struct.field] = output{:};
 
     values = cell2mat(values');
+    values(isnan(values)) = 0; % convert any NaNs to 0
     % Define the maximum value
     if nargin > 2
         maxv = varargin{1};

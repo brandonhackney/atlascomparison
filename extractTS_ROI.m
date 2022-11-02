@@ -219,7 +219,8 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
         fprintf('\tFile: %s:\n',filename);
         
         % Get indexing info pulled from filename
-        taskID = find(strcmp(mtcPile(file).task,taskList));
+%         taskID = find(strcmp(mtcPile(file).task,taskList));
+        [~,~,taskID] = getConditionFromFilename(mtcPile(file).task);
         run = mtcPile(file).run;
 %             runNum = str2double(run(end)); % make sure you just use the number
             runNum = str2double(run(5));
@@ -291,7 +292,8 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
             hem = 'rh';
         end
         
-        for taskID = 1:length(taskList)
+        for t = 1:length(taskList)
+            [~,~, taskID] = getConditionFromFilename(taskList{t});
             tempData = data([]); % get the field headers
                 data = data([]); % it's unused now; clear memory
             tempPred = [];

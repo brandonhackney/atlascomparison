@@ -1,4 +1,8 @@
 function [cluster,LowerThreshold] = fdrCluster(tMap,df)
+% [cluster,LowerThreshold] = fdrCluster(tMap,df)
+% Given an input matrix tMap, tells you which indices are q <= 0.05
+% LowerThreshold tells you the cutoff point
+
 % Calculate regular p values
 pMap = 1-tcdf(tMap,df);
 % Calculate adjusted p values at q = 0.05 with Benjamini Hochberg FDR

@@ -3,6 +3,8 @@ function output = batchGLM(subList, atlasList)
 % Once GLM data is extracted, threshold it and define functional regions
 % Send those ROIs to diceParcel to compare against parcels
 % Also outputs a struct with the whole-brain data per task per subject
+% BEWARE that uses up a TON of memory
+% So if you don't NEED it, call without an output, and I can save memory.
 %
 % INPUTS:
 % subList is a vector of subject ID numbers (prefix is added within)
@@ -16,11 +18,15 @@ fprintf(1,'Initializing...')
 %% 
 
 % Navigate to data folder
-homeDir = pwd;
-addpath(homeDir); % ensures other functions are available
-cd .. % Move from /analysis/ to project root
-cd(['data' filesep 'deriv'])
-dataDir = pwd; % Base location of all subject folders
+paths = specifyPaths;
+homeDir = paths.basePath;
+dataDir = paths.deriv;
+cd(dataDir);
+% homeDir = pwd;
+% addpath(homeDir); % ensures other functions are available
+% cd .. % Move from /analysis/ to project root
+% cd(['data' filesep 'deriv'])
+% dataDir = pwd; % Base location of all subject folders
 fprintf(1,'Done.\n')
 
 for a = 1:length(atlasList)
@@ -67,19 +73,20 @@ for a = 1:length(atlasList)
             % Convert run numbers to a binary matrix
             pred = convertRunCol(pred);
             
+            hemstr = {'lh','rh'}; hemstr2 = {'LH','RH'};
             for h = 1:2
-                if h == 1
-                    hem = 'lh';
-                        if subjectNumber == 7, hem = 'LH'; end
-                elseif h == 2
-                    hem = 'rh';
-                        if subjectNumber == 7, hem = 'RH'; end
-                end
-
+                hem = hemstr{h};
                 % Get MTC patterns and concatenate
                 condName = conditionList(t).mtc;
                 contName = conditionList(t).contrast;
-                clear f; f = dir(['*' condName '*' hem '.mtc']);
+                clear f;
+                f = dir(['*' condName '*' hem '.mtc']);
+                if isempty(f)
+                    % Probably bc it uses 'LH' instead of 'lh', so try this
+                    % Specific to STS7, 14, and 17. But I like flexiblility
+                    hem = hemstr2{h};
+                    f = dir(['*' condName '*' hem '.mtc']);
+                end
                 pattern = [];
                 maskPattern = [];
                 for r = 1:length(f)
@@ -100,6 +107,11 @@ for a = 1:length(atlasList)
     %             [output.task(t).sub(s).hem(h).data, fMap] = getGLM(pattern,pred,posInd,negInd);
                 [tMap,output.task(t).sub(s).hem(h).data.beta,output.task(t).sub(s).hem(h).data.residuals] = simpleGLM(pattern,pred,getContrastVector(size(pred,2),posInd,negInd));
                     tMap = single(tMap'); % conversion of simpleGLM output to match getGLM
+                    
+                    % Save memory
+                    if nargout < 1
+                        clear output
+                    end
                     % Truncate map to only use parcellated region
                     if length(glmMask(h).verts) == length(tMap)
                         fullMap = zeros([numVert,1]);

@@ -8,8 +8,8 @@ p = specifyPaths;
 
 % !! Set these manually !!
 
-% Pick data to compare: 'atlas', or 'res' for Schaefer resolutions
-style = 'atlas';
+% Pick data to compare: 'null', 'atlas', or 'res' for Schaefer resolutions
+style = 'null';
 
 % Pick tasks to include: 'social', 'motion', 'control', or 'all'
 condID = 'all';
@@ -30,6 +30,15 @@ switch style
         figLabels = {'100','200','400','600','800','1k'};
         atlasname = {'Schaefer 100', 'Schaefer 200', 'Schaefer 400', 'Schaefer 600', 'Schaefer 800', 'Schaefer 1,000'};
         atlasID = {'schaefer100','schaefer200','schaefer400','schaefer600','schaefer800','schaefer1000'};
+    case 'null'
+        numNulls = 1000;
+        % lazy 'preallocation':
+        for n = numNulls:-1:1
+            nullnum = sprintf('%04.f',n);
+            figLabels{n} = nullnum;
+            atlasname{n} = ['Null #', nullnum];
+            atlasID{n} = ['null_', nullnum];
+        end
 end
 
 switch condID
@@ -62,7 +71,10 @@ switch condID
         error = 'Incorrect condID. Pick from social, motion, control, or all.';
 end
 
-hemstr = {'LH', 'RH'};
+numMetrics = size(metricID,2);
+numAtlases = size(atlasID,2);
+
+hemstr = {'LH','RH'};
 for h = 1:2 % hemisphere: big outer loop encompassing all
     
 hem = hemstr{h};
@@ -71,8 +83,8 @@ fig = figure; % for the boxplots below
 fig.Color = [1,1,1]; % white background
 
 
-for m = 1:size(metricID, 2)
-   for a = 1:size(atlasID, 2)
+for m = 1:numMetrics
+   for a = 1:numAtlases
 
        [score(m, :, a, h), confMats{m,a,h}, taskNames,truLab{m,a,h},prdLab{m,a,h}] = atlasClassify(atlasID{a}, metricID{m}, condID, h);
        if a == 1
@@ -131,69 +143,70 @@ end % for metric
 
 end % for hemisphere
 
-% Multiway ANOVA (more flexible than anova2)
+%% Multiway ANOVA (more flexible than anova2)
 % Include hemisphere as a factor instead of testing separately
 % Can specify model parameters and variable names like an adult
 % BUT need to flatten out to a 1xn vector; it can't take a matrix :(
 % y is 1xn elements long, and so too must be each g in {g1,g2...gx}
-y = reshape(score,1,numel(score)); %reads rows, then cols, then pages etc
-    mtrc = zeros(size(score));
-        for e = 1:size(score,1)
-            mtrc(e,:,:,:) = e;
-        end
-        mtrc = reshape(mtrc,1,numel(mtrc));
-        mtrc = metricID(mtrc);
-    fld = zeros(size(score));
-        for e = 1:size(score,2)
-            fld(:,e,:,:) = e;
-        end
-        fld = reshape(fld,1,numel(fld));
-    atls = zeros(size(score));
-        for e = 1:size(score,3)
-            atls(:,:,e,:) = e;
-        end
-        atls = reshape(atls,1,numel(atls));
-        atls = atlasname(atls); % check this works
-    hms = zeros(size(score));
-        for e = 1:size(score,4)
-            hms(:,:,:,e) = e;
-        end
-        hms = reshape(hms,1,numel(hms));
-        HMLST = {'LH' 'RH'};
-        hms = HMLST(hms);
-        
-% figure();
-varnames = {'Metric','Fold','Atlas','Hemisphere'};
-rfx = 2; %which of the above variables is a random effect?
-[pval,tbl,stats] = anovan(y,{mtrc fld atls hms},'model','interaction','varnames',varnames,'random',rfx);
-% [php, phm, phg] = multcompare(stats, 'Dimension', [1,3]); % come back and play with this - change which dims to compare
 
-% Make per-hemisphere figures
+% y = reshape(score,1,numel(score)); %reads rows, then cols, then pages etc
+%     mtrc = zeros(size(score));
+%         for e = 1:size(score,1)
+%             mtrc(e,:,:,:) = e;
+%         end
+%         mtrc = reshape(mtrc,1,numel(mtrc));
+%         mtrc = metricID(mtrc);
+%     fld = zeros(size(score));
+%         for e = 1:size(score,2)
+%             fld(:,e,:,:) = e;
+%         end
+%         fld = reshape(fld,1,numel(fld));
+%     atls = zeros(size(score));
+%         for e = 1:size(score,3)
+%             atls(:,:,e,:) = e;
+%         end
+%         atls = reshape(atls,1,numel(atls));
+%         atls = atlasname(atls); % check this works
+%     hms = zeros(size(score));
+%         for e = 1:size(score,4)
+%             hms(:,:,:,e) = e;
+%         end
+%         hms = reshape(hms,1,numel(hms));
+%         HMLST = {'LH' 'RH'};
+%         hms = HMLST(hms);
+%         
+% figure();
+% varnames = {'Metric','Fold','Atlas','Hemisphere'};
+% rfx = 2; %which of the above variables is a random effect?
+% [pval,tbl,stats] = anovan(y,{mtrc fld atls hms},'model','interaction','varnames',varnames,'random',rfx);
+% % [php, phm, phg] = multcompare(stats, 'Dimension', [1,3]); % come back and play with this - change which dims to compare
+
+%% Make per-hemisphere figures
 for h = 1:2
     hem = hemstr{h};
 % Generate CONFUSION MATRICES for each atlas-metric combination
 % in confMats, j is metric and k is atlas
 % each cell of confMats is task x task x subject
 % reuse a and m from above for count of atlases and metrics
-figure()
-    for j = 1:m
-        for k = 1:a
-        g = k + (j-1)*a;
-        subplot(m,a,g)
-            imagesc(mean(confMats{j,k,h},3),[0 1]);
-            title(sprintf('%s, %s for %s', hem, strrep(mFig{j},'_',' '),atlasname{k}));
-            xticks(1:length(taskList{j})); yticks(1:length(taskList{j}));
-            xticklabels(taskList{j});
-            yticklabels(taskList{j});
-            xtickangle(45);
-            xlabel('Predicted');
-            ylabel('Data');
-            caxis([0 1]);
-%             colorbar;
-        end % for k
-    end % for j
-    clear g j k;
-% end % for h
+% figure()
+%     for j = 1:numMetrics
+%         for k = 1:numAtlases
+%         g = k + (j-1)*numAtlases;
+%         subplot(numMetrics,numAtlases,g)
+%             imagesc(mean(confMats{j,k,h},3),[0 1]);
+%             title(sprintf('%s, %s for %s', hem, strrep(mFig{j},'_',' '),atlasname{k}));
+%             xticks(1:length(taskList{j})); yticks(1:length(taskList{j}));
+%             xticklabels(taskList{j});
+%             yticklabels(taskList{j});
+%             xtickangle(45);
+%             xlabel('Predicted');
+%             ylabel('Data');
+%             caxis([0 1]);
+% %             colorbar;
+%         end % for k
+%     end % for j
+%     clear g j k;
+% % end % for h
 
 % smaller confusion matrix grid, for just one metric (pick meanB)
 % figure()
@@ -217,38 +230,55 @@ figure()
 
 % Generate a confusion chart, and cluster the tasks
 % Requires Matlab R2018b or higher
-figure()
-    for j = 1:size(metricID, 2)
-        for k = 1:a
-        g = k + (j-1)*a;
-        subplot(m,a,g)
-        cm1 = confusionchart(truLab{j,k,h}, prdLab{j,k,h});
-%         sortClasses(cm1,'cluster'); % can set a vector of display order
-        sortClasses(cm1,{'AVLocal', 'Bio-Motion','ComboLocal','DynamicFaces','SocialLocal','ToM','MTLocal','Motion-Faces','Objects','Speech','BowtieRetino'});
+% figure()
+%     for j = 1:numMetrics
+%         for k = 1:numAtlases
+%         g = k + (j-1)*numAtlases;
+%         subplot(numMetrics,numAtlases,g)
+%         cm1 = confusionchart(truLab{j,k,h}, prdLab{j,k,h});
+% %         sortClasses(cm1,'cluster'); % can set a vector of display order
+% %         sortClasses(cm1,{'AVLocal', 'Bio-Motion','ComboLocal','DynamicFaces','SocialLocal','ToM','MTLocal','Motion-Faces','Objects','Speech','BowtieRetino'});
 %         sortClasses(cm1,{'AVLocal', 'Bio-Motion','ComboLocal','DynamicFaces','SocialLocal','ToM','MTLocal','Objects','Speech','BowtieRetino'});
-            title(sprintf('%s, %s for %s', hem, strrep(mFig{j},'_',' '),atlasname{k}));
-        end % for k
-    end % for j
+%             title(sprintf('%s, %s for %s', hem, strrep(mFig{j},'_',' '),atlasname{k}));
+%         end % for k
+%     end % for j
     
 % Dendrograms showing the hierarchical clustering of tasks
-figure()
-    lnks = [];
-    for j = 1:size(metricID, 2)
-        for k = 1:a
-        g = k + (j-1)*a;
-        subplot(m,a,g)
-        cmt = confusionmat(truLab{j,k,h},prdLab{j,k,h});
-        dst = pdist(cmt); % calc euclidean distance
-        lnk = linkage(dst); % calc clustering
-        lnks = [lnks;lnk];
-        idx = optimalleaforder(lnk,dst); % calc ordering
-        ddlabs = taskNames(idx); %reorder task labels
-        dendrogram(lnk,'Reorder',idx,'Labels',ddlabs,'Orientation','left','ColorThreshold','default');
-            title(sprintf('%s, %s for %s', hem, strrep(mFig{j},'_',' '),atlasname{k}));
+% figure()
+%     lnks = [];
+%     for j = 1:numMetrics
+%         for k = 1:numAtlases
+%         g = k + (j-1)*numAtlases;
+%         subplot(numMetrics,numAtlases,g)
+%         cmt = confusionmat(truLab{j,k,h},prdLab{j,k,h});
+%         dst = pdist(cmt); % calc euclidean distance
+%         lnk = linkage(dst); % calc clustering
+%         lnks = [lnks;lnk];
+%         idx = optimalleaforder(lnk,dst); % calc ordering
+%         ddlabs = taskNames(idx); %reorder task labels
+%         dendrogram(lnk,'Reorder',idx,'Labels',ddlabs,'Orientation','left','ColorThreshold','default');
+%             title(sprintf('%s, %s for %s', hem, strrep(mFig{j},'_',' '),atlasname{k}));
 %             xlim([0,11]);
-        end % for k
-    end % for j
-    
+%         end % for k
+%     end % for j
+
+% Generate a histogram aggregating classification accuracy across atlases
+% Use score, which is metric x subject x atlas x hemi
+figure()
+    for j = 1:m
+        subplot(1,m,j)
+            histogram(squeeze(score(j,:,:,h)));
+            title(sprintf('%s',mFig{j}));
+            xlim([0,101]);
+            xticks([0 20 40 60 80 100]);
+            xlabel('Classification Accuracy');
+            ylabel('Count');
+            if strcmp(style,'null')
+                ylim([0, 7000]);  
+            end
+    end
+    clear j
+
 end % for h
 
 
