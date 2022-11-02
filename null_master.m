@@ -4,9 +4,10 @@ function null_master(createNulls, applyToSubs, doClassSetup, RunClass)
 % Executes in three main sections:
 %   1) Creating the template null models
 %   2) Applying to individual subjects (and extracting timeseries, as needed)
-%   3) Run classification
+%   3) Organizing data into classifier-ready files
+%   4) Running classification
 %
-% Takes as input three flags to determine whether to run each section as noted above 
+% Takes as input four flags to determine whether to run each section as noted above 
 %   1 = run section
 %   0 = skip
 
@@ -26,6 +27,11 @@ NumSubs = length(subList);
  end
 
 numNulls = 1000;
+% Specify the names of the null atlases
+atlasList = cell(1,numNulls);
+for a = 1:numNulls
+    atlasList{a} = ['null_',num2str(a,'%04.f')];
+end
 
 % Call this python script to build the null atlases, if specified by the user. 
 % It iterates 1000 times on its own
@@ -38,7 +44,7 @@ if createNulls == 1
     pyrunfile('/data/home/brandon/Python/Scripts/randFragmenter.py');
     
     % Create the gcs files that map null models to fsaverage
-    null_makeGCS() %no output variables needed; loops on its own
+    null_makeGCS(atlasList) %no output variables needed; loops on its own
     
     % Create template POI files for each null model
     % This gives us the XYZ coordinates of each vertex
@@ -296,39 +302,27 @@ end
 
 
 if doClassSetup == 1
-    % Specify the names of the null atlases
-    atlasList = cell(1,numNulls);
-    for a = 1:numNulls
-        atlasList{a} = ['null_',num2str(a,'%04.f')];
-    end
+
     
     % Set up for classification analysis
-    classSetup(subList, atlasList); % generate class files for above metrics
-%     null_batchGLM(subList);
-%     subsetGLM(subList,atlasList);
-%     diceBatch2(subList,atlasList);
+    classSetup(subList, atlasList); % generate class files for beta metrics
+    null_batchGLM(subList); % calculate whole-brain GLM
+    subsetGLM(subList,atlasList); % index above with just the STS parcels
+    diceBatch2(subList,atlasList); calculate "Dice", export to class file
+% insert line for stdFC here
+%     generateOmnibus(atlasList); aggregate all metrics into a single file
 end
+
 
  % Once all subject metrics are computed, then you can run the classification
 if RunClass == 1
 
-    for hemi = 1:2
-        for null = 1:numNulls
+    %run omnibus classification & save output somehow
+    null_atlasClassify_Batch;
+
+
+    % save overall classification accuracy distribution
     
- 
-            % use existing metric variables in memory or load from file
-            
-            % generateOmnibus(atlasList); % aggregate all metrics into a single thing
-
-            % Manually edit atlasClassify_Batch to specify the atlases to be used
-            % Includes coming up with abbreviated names for plots
-
-            %run omnibus classification & save output
-            atlasClassify_Batch
-
-
-            % save overall classification accuracy distribution
-        end
-    end
+    % Compare null accuracy to regular atlas accuract
 end
 

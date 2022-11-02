@@ -1,5 +1,6 @@
-function null_makeGCS()
+function null_makeGCS(atlasList)
 % generate GCS file from many .annot files
+% input atlasList is a cell array of atlas names, minus the .annot
 % use system() to call freesurfer mris_ca_train()
 % if output == 0, the system command was executed successfully
 
@@ -13,17 +14,21 @@ outpath = '/data2/2020_STS_Multitask/data/sub-04/fs';
 
 hstr = {'lh','rh'};
 
+if ischar(atlasList)
+    % If only one, passed as char, then encase it in a cell
+    atlasList = {atlasList};
+end
+numAtlas = length(atlasList);
+
 home = pwd;
 cd(outpath);
+
 for h = 1:2
     hem = hstr{h};
-    for x = 1:1000
+    for x = 1:numAtlas
         % ARGUMENTS
         % define annot file name
-        nstr = num2str(x,'%04.f'); % pad with 0s to 4 digits long
-        fname = ['null_' nstr];
-            % targets e.g. lh.null_0001.annot
-            % but should probably just do lh.null.annot in 1000 subfolders
+        fname = atlasList{x};
         canonsrf = 'sphere.reg';
         outfile = [outpath filesep hem '.' fname '.gcs'];
             % e.g. lh.null_0001.gcs
@@ -43,7 +48,7 @@ for h = 1:2
             cd(home)
             error('Command not successful! Review:\n%s\n',cmdStr)
         end
-    end % for 1000 annots
+    end % for atlas
 end % for hem
 cd(home)
 end
