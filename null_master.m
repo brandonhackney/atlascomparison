@@ -99,7 +99,7 @@ if applyToSubs == 1
         for n = 1:numNulls
             for hemi = 1:2
                 fpath = [p.baseDataPath 'sub-04/fs/sub-04-Surf2BV/'];
-                poifname = ['sub-04_',hemstr{hemi},'_null_',num2str(n,'%04.f'),'.annot.poi'];
+                poifname = ['sub-04_',hemstr{hemi},'_',atlasList{n},'.annot.poi'];
                 templatePOI{n, hemi} = null_parcelNames([fpath poifname]); %compare against sub-04_lh_null_xxx1.poi
 
                 % Increment progress bar across both hemis
@@ -135,7 +135,7 @@ if applyToSubs == 1
             for hemi = 1:2
                 hem = hemstr{hemi};
                 % set up proper files
-                nullNum = ['null_', num2str(null, '%04.f')];
+                nullNum = atlasList{null};
                 nullfName = strcat(hemstr{hemi}, '.', nullNum, '.annot');
                 nullfNameNoHem = [nullNum, '.annot'];
                 gcsfName = strcat(hemstr{hemi}, '.', nullNum, '.gcs');
