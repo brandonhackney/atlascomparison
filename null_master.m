@@ -26,11 +26,20 @@ NumSubs = length(subList);
      subCell{s} = ['STS' num2str(subList(s))];
  end
 
-numNulls = 1000;
-% Specify the names of the null atlases
-atlasList = cell(1,numNulls);
-for a = 1:numNulls
-    atlasList{a} = ['null_',num2str(a,'%04.f')];
+% numNulls = 1000;
+% % Specify the names of the null atlases
+% atlasList = cell(1,numNulls);
+% for a = 1:numNulls
+%     atlasList{a} = ['null_',num2str(a,'%04.f')];
+% end
+
+% Specify the names of the atlases to use
+atlasList = [];
+resList = [150 125 100 75 50 25 10 5 2];
+numNulls = length(resList);
+for a = numNulls:-1:1
+    rnum = resList(a);
+    atlasList{a} = ['res',num2str(rnum,'%03.f')];
 end
 
 % Call this python script to build the null atlases, if specified by the user. 
@@ -89,7 +98,7 @@ if applyToSubs == 1
     templatefname = 'nullTemplate.mat';
     templatePath = fullfile(p.basePath, templatefname);
     if exist(templatePath, 'file')
-        load(templatePath);
+        templatePOI = importdata(templatePath);
     else
         % show a progress bar instead of printing a row for each null
         cntr = 0;
