@@ -37,7 +37,22 @@ for h = 1:2
         args = [hem ' ' canonsrf ' ' fname ' ' sub ' ' outfile];
         
         % OPTIONS
-        opts = ['-sdir ' outpath ' -t /data1/fssubdir/null174_mycolortable.txt'];
+        opts = ['-sdir ' outpath ];
+        if contains(fname,'null')
+            % We defined a custom color table so names are same
+            opts = [opts ' -t /data1/fssubdir/null174_mycolortable.txt'];
+        else
+            % Make a colortable from the input annotation
+            annotname = [hem '.' fname '.annot'];
+            ctabname = [hem '.' fname '.ctab'];
+            ctablepath = fullfile(fspath,ctabname);
+            annotpath = fullfile(fspath,annotname);
+%             cd(fspath);
+            exportColorTable(annotpath,ctablepath);
+%             cd(outpath);
+            
+            opts = [opts ' -t ' ctablepath];
+        end
         
         % build the command
         cmdStr = ['mris_ca_train ' opts ' ' args];
@@ -48,6 +63,7 @@ for h = 1:2
             cd(home)
             error('Command not successful! Review:\n%s\n',cmdStr)
         end
+
     end % for atlas
 end % for hem
 cd(home)

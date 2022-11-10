@@ -27,8 +27,10 @@ if ~isfield(Cfg, 'FREESURFER_HOME'), Cfg.FREESURFER_HOME = '/usr/local/freesurfe
 if ~isfield(Cfg,'SUBJECTS_DIR'), Cfg.SUBJECTS_DIR = '/usr/local/freesurfer/subjects'; else end;
 %if ~isfield(Cfg,'SUBJECTS_DIR'), Cfg.SUBJECTS_DIR = '/Volumes/KoogleData/freesurfer/subjects'; else end;
 %CONFIGURATION
-if ~isfield(Cfg, 'projectDir'), Cfg.projectDir = ''; else end;
-if ~isfield(Cfg, 'hemis'), Cfg.hemis = {'lh', 'rh'}; else end
+if ~isfield(Cfg, 'projectDir'), Cfg.projectDir = ''; else, end
+if ~isfield(Cfg, 'sourceDir'), Cfg.sourceDir = Cfg.SUBJECTS_DIR; else, end
+if ~isfield(Cfg, 'sourceSub'), Cfg.sourceSub = 'fsaverage'; else, end
+if ~isfield(Cfg, 'hemis'), Cfg.hemis = {'lh', 'rh'}; else, end
 if ~isfield(Cfg, 'surfaceTypes'), Cfg.surfaceTypes = {'inflated', 'pial', 'smoothwm', 'sphere'}; else end;
 % NOTE: change in atlas name from BA.annot to BA_exvivo.annot in latest
 % version of FS (11/20/17 JP)
@@ -123,8 +125,8 @@ if ~exist(inAnnotFileName, 'file')
     outAnnotFileName = fullfile(thisSubjectDir, sprintf('%s.%s.annot', thisHemi, thisAtlas));
 
     %mri_surf2surf --srcsubject fsaverage --trgsubject $1 --hemi lh --sval-annot $SUBJECTS_DIR/fsaverage/label/lh.Yeo2011_7Networks_N1000.annot --tval $SUBJECTS_DIR/$1/label/lh.Yeo2011_7Networks_N1000.annot
-    strCmd = sprintf('! %s/bin/mri_surf2surf --srcsubject fsaverage --trgsubject %s --hemi %s --sval-annot %s/fsaverage/label/%s.%s --tval %s',...
-        Cfg.FREESURFER_HOME, Cfg.currentSubjectName, thisHemi, Cfg.SUBJECTS_DIR, thisHemi, thisAtlas, outAnnotFileName);
+    strCmd = sprintf('! %s/bin/mri_surf2surf --srcsubject %s --trgsubject %s --hemi %s --sval-annot %s/%s/label/%s.%s --tval %s',...
+        Cfg.FREESURFER_HOME, Cfg.sourceSub, Cfg.currentSubjectName, thisHemi, Cfg.sourceDir, Cfg.sourceSub, thisHemi, thisAtlas, outAnnotFileName);
 %     fprintf(1, '**********************************************************\n');
 %     fprintf(1, 'EXECUTING SHELL COMMAND: %s\n', strCmd);
 %     fprintf(1, '**********************************************************\n');
