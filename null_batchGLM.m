@@ -1,4 +1,4 @@
-function null_batchGLM(subList)
+function null_batchGLM(subList,varargin)
 % Wrapper function to calculate multi-run GLMs as needed for diceBatch2
 % Exports t-statistic maps and degrees of freedom, but doesn't do FDR yet
 % Avoids using any atlas info, which is now done in subsetGLM() for speed
@@ -18,6 +18,15 @@ paths = specifyPaths;
 homeDir = paths.basePath;
 dataDir = paths.deriv;
 cd(dataDir);
+
+% parse varargin
+if ~isempty(varargin)
+    assert(islogical(varargin{1}),'Randomizer flag must be type logical!');
+    randomize = varargin{1};
+else
+    randomize = false;
+end
+
 
 fprintf(1,'Done.\n')
 
@@ -66,10 +75,20 @@ for s = 1:length(subList)
             for r = 1:length(f)
                 file = xff(f(r).name);
                 numVert = length(file.MTCData);
-                pattern = [pattern; file.MTCData];
+                
+                thisData = file.MTCData;
+                if randomize
+                    % Replace data with random noise, of similar SD
+                    thisData = random('Normal',0,std(thisData,1,'all'),size(thisData));
+                else
+                    % Mean-center each voxel within each run
+                    thisData = thisData - mean(thisData, 1);
+                end
+                pattern = [pattern; thisData];
                 file.clearobj;
             end % for r
-
+            clear thisData
+            
             fprintf(1,'\n\tCalculating GLMs for condition %s %s...',contName,hem)
                 %tic
 

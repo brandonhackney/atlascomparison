@@ -26,20 +26,39 @@ NumSubs = length(subList);
      subCell{s} = ['STS' num2str(subList(s))];
  end
 
-% numNulls = 1000;
+% numIter = 1000;
+% numAtlas = 1; % 1000 iterations of 1 resolution
+% numNulls = numIter * numAtlas;
 % % Specify the names of the null atlases
 % atlasList = cell(1,numNulls);
 % for a = 1:numNulls
 %     atlasList{a} = ['null_',num2str(a,'%04.f')];
 % end
 
+% % Specify the names of the atlases to use
+% atlasList = [];
+% resList = [150 125 100 75 50 25 10 5 2];
+% numNulls = length(resList);
+% numIter = 1;
+% numAtlas = numNulls * numIter;
+% for a = numNulls:-1:1
+%     rnum = resList(a);
+%     atlasList{a} = ['res',num2str(rnum,'%03.f')];
+% end
+
 % Specify the names of the atlases to use
 atlasList = [];
 resList = [150 125 100 75 50 25 10 5 2];
-numNulls = length(resList);
-for a = numNulls:-1:1
-    rnum = resList(a);
-    atlasList{a} = ['res',num2str(rnum,'%03.f')];
+numAtlas = length(resList);
+numIter = 50; % how many of each resolution?
+numNulls = numAtlas * numIter; % total number of things
+for r = length(resList):-1:1
+    rnum = resList(r);
+    rname = ['res',num2str(rnum,'%03.f')];
+    for n = numIter:-1:1
+        a = (r-1) * numIter + n; % calc nested position
+        atlasList{a} = [rname '_' num2str(n-1,'%04.f')];
+    end
 end
 
 % Call this python script to build the null atlases, if specified by the user. 
@@ -62,7 +81,7 @@ if createNulls == 1
     subj = 'sub-04';
     for hemi = 1:2
         for null = 1:numNulls
-            nullfNameNoHem = ['null_', num2str(null,'%04.f'),'.annot'];
+            nullfNameNoHem = [atlasList{null},'.annot'];
 
             Cfg.SUBJECTS_DIR = fullfile(p.baseDataPath, subj,'fs');
             Cfg.projectDir = Cfg.SUBJECTS_DIR;
@@ -92,37 +111,50 @@ if applyToSubs == 1
 
     
     % First, get a list of parcels to keep, based on other atlases' STS.
-    % This function is hyper-specific:
-    % Only works if poifname is e.g. 'sub-04_lh_null_0001.annot.poi'
-    % Checks for 'lh' or 'rh' at a specific position in the name string
+    % This function expects the hemisphere to come after the first '_'
+    % e.g. poifname = 'sub-04_lh_null_0001.annot.poi' works
+    % but poifname = 'sub_04_lh...' fails
     templatefname = 'nullTemplate.mat';
     templatePath = fullfile(p.basePath, templatefname);
-    if exist(templatePath, 'file')
-        templatePOI = importdata(templatePath);
-    else
-        % show a progress bar instead of printing a row for each null
-        cntr = 0;
-        progbar = waitbar(cntr,'Generating list of parcels to keep in each null model.');
+    validTemplate = false; badFile = false;
+    while ~validTemplate % This is to avoid writing the else code twice
+        if exist(templatePath, 'file') && ~badFile
+            templatePOI = importdata(templatePath); % load existing file
+            if ~isequal(size(templatePOI), [numNulls, 2])
+                % existing file doesn't match expected size
+                % loop back and move to the else block
+                badFile = true; 
+                % continue?
+            else
+                % Template matches expected size, so keep and break out
+                validTemplate = true;
+            end
+        else
+            % show a progress bar instead of printing a row for each null
+            cntr = 0;
+            progbar = waitbar(cntr,'Generating list of parcels to keep in each null model.');
 
-        tic;
-        for n = 1:numNulls
-            for hemi = 1:2
-                fpath = [p.baseDataPath 'sub-04/fs/sub-04-Surf2BV/'];
-                poifname = ['sub-04_',hemstr{hemi},'_',atlasList{n},'.annot.poi'];
-                templatePOI{n, hemi} = null_parcelNames([fpath poifname]); %compare against sub-04_lh_null_xxx1.poi
+            tic;
+            for n = 1:numNulls
+                for hemi = 1:2
+                    fpath = [p.baseDataPath 'sub-04/fs/sub-04-Surf2BV/'];
+                    poifname = ['sub-04_',hemstr{hemi},'_',atlasList{n},'.annot.poi'];
+                    fname = fullfile(fpath, poifname);
+                    templatePOI{n, hemi} = null_parcelNames(fname); %compare against sub-04_lh_null_xxx1.poi
 
-                % Increment progress bar across both hemis
-                cntr = 2*(n-1) + hemi;
-                waitbar(cntr/(2*numNulls), progbar);
-            end % for hemi
-        end % for null
-        close(progbar)
-        toc;
+                    % Increment progress bar across both hemis
+                    cntr = 2*(n-1) + hemi;
+                    waitbar(cntr/(2*numNulls), progbar);
+                end % for hemi
+            end % for null
+            close(progbar)
+            toc;
 
-        % Export so we only need to calculate it once during debugging
-        save(templatePath, 'templatePOI');
-    end
-    
+            % Export so we only need to calculate it once during debugging
+            save(templatePath, 'templatePOI');
+            validTemplate = true;
+        end
+    end % while
     
     fprintf(1,'\n\nPROCESSING NULL MODELS FOR SUBJECTS\n\n')
     % Now, start processing nulls for each subject
@@ -164,18 +196,21 @@ if applyToSubs == 1
 
                 % make annotation file
 %                 null_makeAnnot(subj,templatePOI{null, hemi}); %need gscfName here? (annots go into fs label dir)
-                null_makeAnnot(subj,nullNum);
+                null_makeAnnot(subj,nullNum, hem);
                                 
                  % sanity check labeling, only continue if there are > 1 unique labels
                 [~, l, ~] = read_annotation(nullfName); %might need path
                 if length(unique(l)) == 1
-                    fprintf(1, 'ERROR = %s has incorrect number of parcel labels. Aborting.\n', nullfName);
-                    continue
+%                     fprintf(1, 'ERROR = %s has incorrect number of parcel labels. Aborting.\n', nullfName);
+%                     continue
+                    error('%s contains only one parcel label. Terminating. Check fs color table and try again.',nullfName);
                 end
 
                 % Convert annot to poi using modified version of fsSurf2BV
                 Cfg.SUBJECTS_DIR = fsDir;
                 Cfg.projectDir = Cfg.SUBJECTS_DIR;
+                Cfg.sourceDir = [p.baseDataPath 'sub-04/fs'];
+                Cfg.sourceSub = 'sub-04';
                 Cfg.atlas = nullfNameNoHem;
                 Cfg.hemis = hemstr(hemi); % just one but keep it as a cell
                 % Avoid writing POI to disk if an output var is specified
@@ -257,7 +292,7 @@ if applyToSubs == 1
                         Pattern.task(task).hem(hemi).data(parcel).label = subPOI_STS(parcel).Name;
                         Pattern.task(task).hem(hemi).data(parcel).vertices = subPOI_STS(parcel).Vertices;
                         Pattern.task(task).hem(hemi).data(parcel).vertexCoord = betas{hemi}(task).vertexCoords(subPOI_STS(parcel).Vertices);
-                        Pattern.task(task).hem(hemi).data(parcel).ColorMap = subPOI_STS(task).Color;
+                        Pattern.task(task).hem(hemi).data(parcel).ColorMap = subPOI_STS(parcel).Color;
 %                         Pattern.task(task).hem(hemi).data(parcel).pattern = betas{hemi}(task).pattern(:, subPOI_STS(parcel).Vertices);
                         Pattern.task(task).hem(hemi).data(parcel).betaHat = betas{hemi}(task).betaHat(:,subPOI_STS(parcel).Vertices);
                         
@@ -317,9 +352,9 @@ if doClassSetup == 1
     classSetup(subList, atlasList); % generate class files for beta metrics
     null_batchGLM(subList); % calculate whole-brain GLM
     subsetGLM(subList,atlasList); % index above with just the STS parcels
-    diceBatch2(subList,atlasList); calculate "Dice", export to class file
-% insert line for stdFC here
-%     generateOmnibus(atlasList); aggregate all metrics into a single file
+    diceBatch2(subList,atlasList); % calculate "Dice", export to class file
+    null_FCstd_byParcel(atlasList, subCell); %calculate stdFC, export to class file (expects cell inputs)
+    generateOmnibus(atlasList); % aggregate all metrics into a single file
 end
 
 

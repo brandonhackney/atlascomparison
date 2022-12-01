@@ -9,14 +9,18 @@ function names = null_parcelNames(poiName)
 if ~strcmp(fext,'.poi')
     error('First input is not a valid POI filename')
 end
-if ~(strcmp(fname(8:9),'lh') || strcmp(fname(8:9),'rh'))
+% Extract hemisphere string from filename
+% Expect hem name to come after first underscore
+fnameparts = strsplit(fname,'_');
+hem = fnameparts{2}; 
+if ~(strcmp(hem,'lh') || strcmp(hem,'rh'))
     error('First input does not specify hemisphere of POI!')
 end
 
 % Get hemisphere index from filename
-if strcmp(fname(8:9),'lh')
+if strcmp(hem,'lh')
     h = 1;
-elseif strcmp(fname(8:9),'rh')
+elseif strcmp(hem,'rh')
     h = 2;
 end
 
@@ -29,7 +33,12 @@ POI = poi.POI;
 % Check which parcels in the POI contain vertices from the vertex list
 names = [];
 for p = 1:length(POI)
-    if intersect(verts(h).hem, POI(p).Vertices)  % consider thresholding to e.g. need at least 100 verts of intersection
+    % Calculate threshold for including parcel
+    % Set as 15% of parcel size, but capped at the whole mask area
+    % This allows you to still keep e.g. a whole-hemisphere parcel
+    threshold = min(0.15 * numel(POI(p).Vertices), 0.15 * numel(verts(h).hem));
+    check = intersect(verts(h).hem, POI(p).Vertices);
+    if ~isempty(check) && numel(check) >= threshold
         names = [names; {POI(p).Name}];
     end
 end

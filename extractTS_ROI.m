@@ -1,12 +1,20 @@
-function output = extractTS_ROI(subjectNumber,atlasName)
+function output = extractTS_ROI(subjectNumber,atlasName, varargin)
 % output = extractTS(subjectList,atlasName)
 % Reads in SRF, POI, ,SDM, and MTC files for a subject
 % Extracts and outputs the timeseries of each voxel, labeled by POI
 % subjectNumber: an integer subject number (e.g. 3)
 % atlasName: a character vector of the atlas name (e.g. 'schaefer400')
+%
+% optional name-value inputs (all take logical values)
+% 'hist': runs generateHistograms, which saves plots to disk
+% 'poi': saves recolored POIs with the SD of each parcel as the parcel name
+% 'rand': converts each timeseries to random noise, as a quality check
 
 % Suppress a useless Neuroelf warning that shows up in one of the loops
 warning('off','xff:BadTFFCont');
+
+% Parse varargin
+[poiGen, makeHist, randomize] = parsevarargin(varargin);
 
 % Convert subject number into ID
 subj = strcat('STS',num2str(subjectNumber));
@@ -242,7 +250,14 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
             data(j).vertices = bv(h).poi.POI(conv).Vertices;
             data(j).vertexCoord = bv(h).srf.VertexCoordinate(data(j).vertices,:);
             data(j).ColorMap = bv(h).poi.POI(conv).Color;
-            data(j).pattern = zscore(mtcPile(file).data.MTCData(:,data(j).vertices)); % note the zscoring
+            thisPattern = mtcPile(file).data.MTCData(:,data(j).vertices);
+            if randomizer
+                % Optionally randomize the timeseries, as a quality check
+                mu = mean(thisPattern, 'all');
+                sigma = std(thisPattern, 0, 'all');
+                thisPattern = random('Normal',mu,sigma,size(thisPattern));
+            end
+            data(j).pattern = zscore(thisPattern);
             data(j).conv = conv;
             
 
@@ -371,7 +386,8 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
 %     % It prints its own 'Done' confirmation
 %     cd(surfDir);
             
-            % Save new POI file with new colors for each task
+            %% Save new POI file with new colors for each task
+            if poiGen
             fprintf(1,'\tWriting new POIs for visualization...\n');
             cd(surfDir);
             for h = 1:2
@@ -457,6 +473,7 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
                 end % task (m)
             end % hem
             fprintf(1,'Done.\n');
+            end % if poiGen
         %end
     %end
     cd(dataDir) % Start new subject
@@ -471,10 +488,61 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
     end
 
 
-% Clean up
+%% Clean up
 cd(homeDir);
-output = generateHistograms(output);
+if makeHist
+    output = generateHistograms(output);
+end
+if randomizer
+    atlasName = [atlasName 'RAND'];
+    output.atlas = atlasName;
+end
+
 fileOut = saveOutput(output, atlasName);
 fprintf(1,"Subject %s saved to /ROIs/%s\n",subj,fileOut);
 
 end
+
+%% subfunctions
+function [poiGen, makeHist, randomize] = parsevarargin(input)
+if ~isempty(input)
+    % check each value
+    numVals = length(input);
+    assert(numVals == 2*nargout, 'Unbalanced name-value pairing!');
+    
+    nameList = input(1:2:numVals);
+    valList = input(2:2:numVals);
+    
+    for i = 1:length(nameList)
+    switch nameList{i}
+        case 'rand'
+            % Output 3: randomization flag
+            % If true, will scramble the MTC data before beta calculation
+            % This is a quality check, to ensure the pipeline is not biased
+            % Must be a logical value
+            assert(islogical(valList{i}), 'Randomizer value must be type logical!');
+            % If you get here, define the output value 
+            randomize = valList{i};
+        case 'poi'
+            % Output 1: whether to export SD-labeled POIs
+            % Our analysis has moved beyond this, so let's skip it by dflt
+            assert(islogical(valList{i}), 'POI flag value must be type logical!');
+            poiGen = valList{i};
+        case 'hist'
+            % Output 2: whether to generate histograms
+            % This saves figures to disk, which can take a long time
+            % Skip by default
+            assert(islogical(valList{i}), 'Histogram flag value must be type logical!');
+            makeHist = valList{i};
+        otherwise
+            error('Unknown name-value pair! Name options are rand, poi, or hist.');
+    end % switch
+    
+    end % for each name-value pair
+else % if input is empty
+    %% set default values
+    randomize = false;
+    poiGen = false;
+    makeHist = false;
+end % if input is not empty
+end % function
