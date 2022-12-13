@@ -14,8 +14,7 @@ function output = extractTS_ROI(subjectNumber,atlasName, varargin)
 warning('off','xff:BadTFFCont');
 
 % Parse varargin
-[poiGen, makeHist, randomize] = parsevarargin(varargin);
-
+[poiGen, makeHist, randomizer] = parsevarargin(varargin);
 % Convert subject number into ID
 subj = strcat('STS',num2str(subjectNumber));
 
@@ -29,7 +28,7 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
 
 %% Begin data extraction for this subject
 
-    try
+try
     output.subID = subj;
     output.atlas = atlasName;
     % Display subject name
@@ -77,7 +76,13 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
         vtcCell{i} = vtcList(i).name;
     end
     
-    %% Read in many MTC files
+    %% Match MTC and SDM data based on filenames
+    % Scans a folder for MTC files
+    % Extracts header info from the filename e.g. task name, run number
+    % Finds the associated VTC, PRT, and SDM based on same
+    % Creates a labeled structure 'mtcPile' with data, predictors, etc.
+    % Adds rows for secondary contrasts, e.g. FFA and PPA using same scan
+    % mtcPile is later used to calculate betas for each contrast
     cd(subjDir);
     mtcList = dir('*.mtc');
     fprintf(1,'\tFound %i MTC files.\n',length(mtcList));
@@ -375,117 +380,23 @@ templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
         fprintf(1,'Done.\n');
     end
     organized = organized([]); % Don't need it anymore, so save memory
-    
-%     fprintf(1,'Done.\n\tCalculating betas...');
-%     cd(homeDir);
-%     
-%     % Determine what column number to use as input 2 here.
-%     % Oh shit that depends on the task, so you can't do everything at once
-%     betaInd = 1;
-%     output = addBetas(output,betaInd);
-%     % It prints its own 'Done' confirmation
-%     cd(surfDir);
             
-            %% Save new POI file with new colors for each task
-            if poiGen
-            fprintf(1,'\tWriting new POIs for visualization...\n');
-            cd(surfDir);
-            for h = 1:2
-                for m = 1:length(output.task)
-                    for z = 1:3 % plus, minus, effect
-                        if z == 1
-                            effect = 'posCond';
-                        elseif z == 2
-                            effect = 'negCond';
-                        elseif z == 3
-                            effect = 'contrastCond';
-                        end
-                  % Reset it each time to ensure you don't compound data
-                    if h == 1
-                        hem = 'lh';
-                        if exist(strcat(subj,'_lh_',atlasName,'.annot.poi'),'file')
-                            bv(1).poi = xff(strcat(subj,'_lh_',atlasName,'.annot.poi'));
-                        elseif exist(strcat(subj,'_LH_',atlasName,'.annot.poi'),'file')
-                            bv(1).poi = xff(strcat(subj,'_LH_',atlasName,'.annot.poi'));
-                        end
-                    elseif h == 2
-                        hem = 'rh';
-                        if exist(strcat(subj,'_rh_',atlasName,'.annot.poi'),'file')
-                            bv(2).poi = xff(strcat(subj,'_rh_',atlasName,'.annot.poi'));
-                        elseif exist(strcat(subj,'_RH_',atlasName,'.annot.poi'),'file')
-                            bv(2).poi = xff(strcat(subj,'_RH_',atlasName,'.annot.poi'));
-                        end
-                    end  
-                    
-                    convArray = [];
-                    for j = 1:length(bv(h).template.POI)
-                        conv = output.task(m).hem(h).data(j).conv;
-                        convArray(j) = conv;
-                        % There's an uneven number of POIs per hemisphere
-                        if j <= length(output.task(m).hem(h).data)
-                            if z == 1
-                                % plus
-                            bv(h).poi.POI(conv).Color = ...
-                                output.task(m).hem(h).data(j).ColorMapPos;
-                            elseif z == 2
-                                % neg
-                            bv(h).poi.POI(conv).Color = ...
-                                output.task(m).hem(h).data(j).ColorMapNeg;
-                            elseif z == 3
-                                % effect
-                            bv(h).poi.POI(conv).Color = ...
-                                output.task(m).hem(h).data(j).ColorMap;
-                            end
-                        end
-                        % Prepend SD value to parcel label
-                        if j <= length(output.task(m).hem(h).data)
-                            if z == 1
-                            bv(h).poi.POI(conv).Name = ...
-                            [num2str(output.task(m).hem(h).data(j).meanSDPos) ': ' bv(h).poi.POI(conv).Name];
-                            elseif z == 2
-                                bv(h).poi.POI(conv).Name = ...
-                                [num2str(output.task(m).hem(h).data(j).meanSDNeg) ': ' bv(h).poi.POI(conv).Name];
-                            elseif z == 3
-                                bv(h).poi.POI(conv).Name = ...
-                                [num2str(output.task(m).hem(h).data(j).sdEffect) ': ' bv(h).poi.POI(conv).Name];
-                            end
-                        end
-                        %--
-                        
-                        
-                    end
-                    
-                    % Remove unaltered entries from POI w/ logical array
-                    reaper = ones([length(bv(h).poi.POI),1]);
-                    reaper(convArray) = 0;
-                    goddamnPoi = bv(h).poi.POI;
-                    goddamnPoi(logical(reaper)) = [];
-                    bv(h).poi.POI = goddamnPoi;
-                    bv(h).poi.NrOfPOIs = bv(h).template.NrOfPOIs;
-                    clear convArray reaper goddamnPoi;
-                    
-                    taskName = output.task(m).name;
-                    newName = strcat(subj,'_',hem,'_',atlasName,'_',taskName,'_',effect,'_trunc.annot.poi');
-                    fprintf(1,'\t\t%s\n',newName)
-
-                    bv(h).poi.SaveAs(char(newName));
-                    end % condition (z)
-                end % task (m)
-            end % hem
-            fprintf(1,'Done.\n');
-            end % if poiGen
+    %% Save new POI files for each task, recolored by metric?
+    if poiGen
+        generateNewPOIs();
+    end % if poiGen
         %end
     %end
     cd(dataDir) % Start new subject
     bv = bv([]); % clear memory
     xff(0, 'clearallobjects'); % should just be the srf and poi at this point
-    catch thisError
-        lineNum = thisError.stack(find(strcmp({thisError.stack.name},'extractTS_ROI'))).line;
-        fprintf(1,'%s didn''t work! Error on line %i:\n',subj, lineNum);
-        fprintf(1,'%s: %s\n',thisError.identifier,thisError.message);
-        cd(homeDir);
-        throw(thisError)
-    end
+catch thisError
+    lineNum = thisError.stack(find(strcmp({thisError.stack.name},'extractTS_ROI'))).line;
+    fprintf(1,'%s didn''t work! Error on line %i:\n',subj, lineNum);
+    fprintf(1,'%s: %s\n',thisError.identifier,thisError.message);
+    cd(homeDir);
+    throw(thisError)
+end
 
 
 %% Clean up
@@ -504,7 +415,7 @@ fprintf(1,"Subject %s saved to /ROIs/%s\n",subj,fileOut);
 end
 
 %% subfunctions
-function [poiGen, makeHist, randomize] = parsevarargin(input)
+function [poiGen, makeHist, randomizer] = parsevarargin(input)
 if ~isempty(input)
     % check each value
     numVals = length(input);
@@ -522,7 +433,7 @@ if ~isempty(input)
             % Must be a logical value
             assert(islogical(valList{i}), 'Randomizer value must be type logical!');
             % If you get here, define the output value 
-            randomize = valList{i};
+            randomizer = valList{i};
         case 'poi'
             % Output 1: whether to export SD-labeled POIs
             % Our analysis has moved beyond this, so let's skip it by dflt
@@ -541,8 +452,98 @@ if ~isempty(input)
     end % for each name-value pair
 else % if input is empty
     %% set default values
-    randomize = false;
+    randomizer = false;
     poiGen = false;
     makeHist = false;
 end % if input is not empty
 end % function
+
+function generateNewPOIs()
+% Writes new POI files where each parcel is named and colored by a metric
+% e.g. instead of having 
+fprintf(1,'\tWriting new POIs for visualization...\n');
+cd(surfDir);
+for h = 1:2
+    for m = 1:length(output.task)
+        for z = 1:3 % plus, minus, effect
+            if z == 1
+                effect = 'posCond';
+            elseif z == 2
+                effect = 'negCond';
+            elseif z == 3
+                effect = 'contrastCond';
+            end
+      % Reset it each time to ensure you don't compound data
+        if h == 1
+            hem = 'lh';
+            if exist(strcat(subj,'_lh_',atlasName,'.annot.poi'),'file')
+                bv(1).poi = xff(strcat(subj,'_lh_',atlasName,'.annot.poi'));
+            elseif exist(strcat(subj,'_LH_',atlasName,'.annot.poi'),'file')
+                bv(1).poi = xff(strcat(subj,'_LH_',atlasName,'.annot.poi'));
+            end
+        elseif h == 2
+            hem = 'rh';
+            if exist(strcat(subj,'_rh_',atlasName,'.annot.poi'),'file')
+                bv(2).poi = xff(strcat(subj,'_rh_',atlasName,'.annot.poi'));
+            elseif exist(strcat(subj,'_RH_',atlasName,'.annot.poi'),'file')
+                bv(2).poi = xff(strcat(subj,'_RH_',atlasName,'.annot.poi'));
+            end
+        end  
+
+        convArray = [];
+        for j = 1:length(bv(h).template.POI)
+            conv = output.task(m).hem(h).data(j).conv;
+            convArray(j) = conv;
+            % There's an uneven number of POIs per hemisphere
+            if j <= length(output.task(m).hem(h).data)
+                if z == 1
+                    % plus
+                bv(h).poi.POI(conv).Color = ...
+                    output.task(m).hem(h).data(j).ColorMapPos;
+                elseif z == 2
+                    % neg
+                bv(h).poi.POI(conv).Color = ...
+                    output.task(m).hem(h).data(j).ColorMapNeg;
+                elseif z == 3
+                    % effect
+                bv(h).poi.POI(conv).Color = ...
+                    output.task(m).hem(h).data(j).ColorMap;
+                end
+            end
+            % Prepend SD value to parcel label
+            if j <= length(output.task(m).hem(h).data)
+                if z == 1
+                bv(h).poi.POI(conv).Name = ...
+                [num2str(output.task(m).hem(h).data(j).meanSDPos) ': ' bv(h).poi.POI(conv).Name];
+                elseif z == 2
+                    bv(h).poi.POI(conv).Name = ...
+                    [num2str(output.task(m).hem(h).data(j).meanSDNeg) ': ' bv(h).poi.POI(conv).Name];
+                elseif z == 3
+                    bv(h).poi.POI(conv).Name = ...
+                    [num2str(output.task(m).hem(h).data(j).sdEffect) ': ' bv(h).poi.POI(conv).Name];
+                end
+            end
+            %--
+
+
+        end
+
+        % Remove unaltered entries from POI w/ logical array
+        reaper = ones([length(bv(h).poi.POI),1]);
+        reaper(convArray) = 0;
+        goddamnPoi = bv(h).poi.POI;
+        goddamnPoi(logical(reaper)) = [];
+        bv(h).poi.POI = goddamnPoi;
+        bv(h).poi.NrOfPOIs = bv(h).template.NrOfPOIs;
+        clear convArray reaper goddamnPoi;
+
+        taskName = output.task(m).name;
+        newName = strcat(subj,'_',hem,'_',atlasName,'_',taskName,'_',effect,'_trunc.annot.poi');
+        fprintf(1,'\t\t%s\n',newName)
+
+        bv(h).poi.SaveAs(char(newName));
+        end % condition (z)
+    end % task (m)
+end % hem
+fprintf(1,'Done.\n');
+end
