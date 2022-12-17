@@ -18,13 +18,19 @@ warning('off','xff:BadTFFCont');
 % Convert subject number into ID
 subj = strcat('STS',num2str(subjectNumber));
 
-% Navigate to data folder
-homeDir = pwd;
-cd .. % Move from /analysis/ to project root
-cd(['data' filesep 'deriv'])
-dataDir = pwd; % Base location of all subject folders
-% Location of independent subject .poi files for ROI restriction
-templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
+% % Navigate to data folder
+% homeDir = pwd;
+% cd .. % Move from /analysis/ to project root
+% cd(['data' filesep 'deriv'])
+% dataDir = pwd; % Base location of all subject folders
+% % Location of independent subject .poi files for ROI restriction
+% templateDir = '/data2/2020_STS_Multitask/data/sub-04/fs/sub-04-Surf2BV/';
+
+% Get paths to use from specifyPaths() function
+paths = specifyPaths;
+homeDir = paths.basePath;
+dataDir = paths.deriv;
+templateDir = paths.template;
 
 %% Begin data extraction for this subject
 
@@ -227,6 +233,8 @@ try
 
     
     %% Extract timeseries from the MTCs and label vertices with POIs
+    % Takes unordered mtcPile and sorts by hem, task, and run
+    % Breaks up whole-hem data matrix into individual parcels, from atlas
     for file = 1:length(mtcPile)
         filename = mtcPile(file).filename;
         fprintf('\tFile: %s:\n',filename);
@@ -362,7 +370,7 @@ try
         output.task(taskID).hem(h).data = addBetas2(tempData, tempPred);
         % Recolor parcels based on betas
             % Determine which column index to use for SD calculation
-        [colInd,negInd] = getConditionFromFilename(taskList{taskID});
+        [colInd,negInd] = getConditionFromFilename(taskList{t});
         [output.task(taskID).hem(h).data] = statSD(output.task(taskID).hem(h).data,colInd,negInd);
         % Recolor based on above calculation
         % Uses this weird method to slice an entire field into a struct
@@ -376,9 +384,9 @@ try
         clear cm colorMap
         cd(surfDir)
 
-        end
+        end % for task
         fprintf(1,'Done.\n');
-    end
+    end % for hem
     organized = organized([]); % Don't need it anymore, so save memory
             
     %% Save new POI files for each task, recolored by metric?
