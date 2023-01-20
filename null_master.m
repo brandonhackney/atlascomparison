@@ -1,4 +1,4 @@
-function null_master(createNulls, applyToSubs, doClassSetup, RunClass)
+function null_master(createNulls, applyToSubs, doClassSetup, RunClass, varargin)
 
 % Runs the master script for building the null atlas model classifications.
 % Executes in three main sections:
@@ -10,7 +10,12 @@ function null_master(createNulls, applyToSubs, doClassSetup, RunClass)
 % Takes as input four flags to determine whether to run each section as noted above 
 %   1 = run section
 %   0 = skip
-
+%
+% Optional input: atlasGroup
+%   options are 'null', 'atlas', 'res', 'mres', or 'sch'
+%   Defines which list of atlases to store the parcel info under
+%   Alters the name of the Template.mat file
+%   By default, uses 'null' since this is the "null master" code
 
 % Define global vars
 p = specifyPaths();
@@ -26,39 +31,64 @@ NumSubs = length(subList);
      subCell{s} = ['STS' num2str(subList(s))];
  end
 
-% numIter = 1000;
-% numAtlas = 1; % 1000 iterations of 1 resolution
-% numNulls = numIter * numAtlas;
-% % Specify the names of the null atlases
-% atlasList = cell(1,numNulls);
-% for a = 1:numNulls
-%     atlasList{a} = ['null_',num2str(a,'%04.f')];
-% end
-
-% % Specify the names of the atlases to use
-% atlasList = [];
-% resList = [150 125 100 75 50 25 10 5 2];
-% numNulls = length(resList);
-% numIter = 1;
-% numAtlas = numNulls * numIter;
-% for a = numNulls:-1:1
-%     rnum = resList(a);
-%     atlasList{a} = ['res',num2str(rnum,'%03.f')];
-% end
+if ~isempty(varargin)
+    atlasGroup = varargin{1};
+else
+    % Default
+    atlasGroup = 'null';
+end
 
 % Specify the names of the atlases to use
 atlasList = [];
-resList = [150 125 100 75 50 25 10 5 2];
-numAtlas = length(resList);
-numIter = 50; % how many of each resolution?
-numNulls = numAtlas * numIter; % total number of things
-for r = length(resList):-1:1
-    rnum = resList(r);
-    rname = ['res',num2str(rnum,'%03.f')];
-    for n = numIter:-1:1
-        a = (r-1) * numIter + n; % calc nested position
-        atlasList{a} = [rname '_' num2str(n-1,'%04.f')];
-    end
+switch atlasGroup
+    case 'null'
+        % 1000 random iterations of 173 parcels per hemisphere
+        numIter = 1000;
+        numAtlas = 1; % 1000 iterations of 1 resolution
+        numNulls = numIter * numAtlas;
+        % Specify the names of the null atlases
+        atlasList = cell(1,numNulls);
+        for a = 1:numNulls
+            atlasList{a} = ['null_',num2str(a,'%04.f')];
+        end
+    case 'res'
+        % A single iteration of null parcelations at various resolutions
+        resList = [150 125 100 75 50 25 10 5 2];
+        numAtlas = length(resList);
+        numIter = 1;
+        numNulls = numAtlas * numIter;
+        for a = numNulls:-1:1
+            rnum = resList(a);
+            atlasList{a} = ['res',num2str(rnum,'%03.f')];
+        end
+
+    case 'mres'
+        % Multiple iterations of null parcellations at many resolutions
+        atlasList = [];
+        resList = [150 125 100 75 50 25 10 5 2];
+        numAtlas = length(resList);
+        numIter = 50; % how many of each resolution?
+        numNulls = numAtlas * numIter; % total number of things
+        for r = length(resList):-1:1
+            rnum = resList(r);
+            rname = ['res',num2str(rnum,'%03.f')];
+            for n = numIter:-1:1
+                a = (r-1) * numIter + n; % calc nested position
+                atlasList{a} = [rname '_' num2str(n-1,'%04.f')];
+            end
+        end
+    case 'atlas'
+        % The original 4 atlases we used
+        atlasList = {'schaefer400', 'glasser6p0', 'gordon333dil', 'power6p0'};
+        numAtlas = 4;
+        numIter = 1;
+        numNulls = numAtlas * numIter;
+    case 'atlasBIG'
+        % The original 4 atlases we used, but do the parcel selection step 
+        atlasList = {'schaeferBIG', 'glasserBIG', 'gordonBIG', 'powerBIG'};
+        numAtlas = 4;
+        numIter = 1;
+        numNulls = numAtlas * numIter;
 end
 
 % Call this python script to build the null atlases, if specified by the user. 
@@ -67,9 +97,9 @@ end
 if createNulls == 1
     
     % create the null models
-    !conda init bash
-    !conda activate atlaspy
-    pyrunfile('/data/home/brandon/Python/Scripts/randFragmenter.py');
+%     !conda init bash
+%     !conda activate atlaspy
+%     pyrunfile('/data/home/brandon/Python/Scripts/randFragmenter.py');
     
     % Create the gcs files that map null models to fsaverage
     null_makeGCS(atlasList) %no output variables needed; loops on its own
@@ -111,50 +141,7 @@ if applyToSubs == 1
 
     
     % First, get a list of parcels to keep, based on other atlases' STS.
-    % This function expects the hemisphere to come after the first '_'
-    % e.g. poifname = 'sub-04_lh_null_0001.annot.poi' works
-    % but poifname = 'sub_04_lh...' fails
-    templatefname = 'nullTemplate.mat';
-    templatePath = fullfile(p.basePath, templatefname);
-    validTemplate = false; badFile = false;
-    while ~validTemplate % This is to avoid writing the else code twice
-        if exist(templatePath, 'file') && ~badFile
-            templatePOI = importdata(templatePath); % load existing file
-            if ~isequal(size(templatePOI), [numNulls, 2])
-                % existing file doesn't match expected size
-                % loop back and move to the else block
-                badFile = true; 
-                % continue?
-            else
-                % Template matches expected size, so keep and break out
-                validTemplate = true;
-            end
-        else
-            % show a progress bar instead of printing a row for each null
-            cntr = 0;
-            progbar = waitbar(cntr,'Generating list of parcels to keep in each null model.');
-
-            tic;
-            for n = 1:numNulls
-                for hemi = 1:2
-                    fpath = [p.baseDataPath 'sub-04/fs/sub-04-Surf2BV/'];
-                    poifname = ['sub-04_',hemstr{hemi},'_',atlasList{n},'.annot.poi'];
-                    fname = fullfile(fpath, poifname);
-                    templatePOI{n, hemi} = null_parcelNames(fname); %compare against sub-04_lh_null_xxx1.poi
-
-                    % Increment progress bar across both hemis
-                    cntr = 2*(n-1) + hemi;
-                    waitbar(cntr/(2*numNulls), progbar);
-                end % for hemi
-            end % for null
-            close(progbar)
-            toc;
-
-            % Export so we only need to calculate it once during debugging
-            save(templatePath, 'templatePOI');
-            validTemplate = true;
-        end
-    end % while
+    templatePOI = null_getTemplateNames(atlasGroup);
     
     fprintf(1,'\n\nPROCESSING NULL MODELS FOR SUBJECTS\n\n')
     % Now, start processing nulls for each subject
@@ -350,10 +337,11 @@ if doClassSetup == 1
     
     % Set up for classification analysis
     classSetup(subList, atlasList); % generate class files for beta metrics
-    null_batchGLM(subList); % calculate whole-brain GLM
+%     null_batchGLM(subList); % calculate whole-brain GLM
     subsetGLM(subList,atlasList); % index above with just the STS parcels
     diceBatch2(subList,atlasList); % calculate "Dice", export to class file
-    null_FCstd_byParcel(atlasList, subCell); %calculate stdFC, export to class file (expects cell inputs)
+%     null_FCstd_byParcel(atlasList, subCell); %calculate stdFC, export to class file (expects cell inputs)
+% NO NO NO! FC takes a million years to finish, forget it!
     generateOmnibus(atlasList); % aggregate all metrics into a single file
 end
 
@@ -370,3 +358,4 @@ if RunClass == 1
     % Compare null accuracy to regular atlas accuract
 end
 
+cd(p.basePath)
