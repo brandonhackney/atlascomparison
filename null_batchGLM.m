@@ -3,6 +3,7 @@ function null_batchGLM(subList,varargin)
 % Exports t-statistic maps and degrees of freedom, but doesn't do FDR yet
 % Avoids using any atlas info, which is now done in subsetGLM() for speed
 % Before GLM calc, pred matrix is cond x vertex, vcat by run
+% Mean-centers each voxel before beta calculation
 
 % INPUTS:
 % subList is a vector of subject ID numbers ('STS' prefix is added within)
@@ -92,7 +93,7 @@ for s = 1:length(subList)
             fprintf(1,'\n\tCalculating GLMs for condition %s %s...',contName,hem)
                 %tic
 
-            [posInd,negInd] = getConditionFromFilename(contName);
+            [posInd,negInd, ~] = getConditionFromFilename(contName);
             contrast = getContrastVector(size(pred,2),posInd,negInd);
             % Calculate t-statistic map
             % skip saving the whole-brain betas and residuals

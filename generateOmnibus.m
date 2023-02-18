@@ -1,7 +1,7 @@
-function generateOmnibus_test(atlasList)
+function generateOmnibus(atlasList)
 % INPUTS:
 % atlasList is a cell array of atlas names
-metricList = {'meanB', 'stdB', 'meanPosB', 'overlap', 'stdFC'}; % meanFC
+metricList = {'meanB', 'stdB', 'meanPosB', 'overlap'}; %, 'stdFC'}; % meanFC
 
 fprintf(1,'Aggregating all classification data into one mega file\n\n')
 

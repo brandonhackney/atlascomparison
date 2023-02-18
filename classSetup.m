@@ -16,8 +16,9 @@ numTasks = length(conditionList); % excludes RestingState
 maxX = numSubs * numTasks; % counts per-task per-sub
 
 % Paths
-basedir = pwd;
-outputdir = [basedir filesep 'class' filesep 'data' filesep];
+pths = specifyPaths;
+basedir = pths.basePath;
+outputdir = pths.classifyDataPath;
 datadir = [basedir filesep 'ROIs' filesep];
 
 for m = 1:4
@@ -66,11 +67,13 @@ for m = 1:4
                 % Load data
                 inname = [datadir 'STS' num2str(subList(sub)) '_' atlasList{atlas} '.mat'];
                 load(inname) % as Pattern
-                
+                % Get output order from filename
+                taskName = Pattern.task(task).name;
+                [~,~,taskInd] = getConditionFromFilename(taskName);
                 % On first good run, insert constant info
                 if goodSub == 1 &&  ~strcmp(Pattern.task(task),'RestingState')
                     % Insert task name for this task
-                    Data.taskNames(task,:) = pad(Pattern.task(task).name,12);
+                    Data.taskNames(taskInd,:) = pad(Pattern.task(task).name,12);
                 end
 
                 % Parcel info
@@ -92,7 +95,7 @@ for m = 1:4
 
                 
                 % Build data
-                x = numSubs * (task-1) + sub; % an index
+                x = numSubs * (taskInd-1) + sub; % an index
                     % accounts for having per subject per task order
                 for h = 1:2
                     % preallocate, but don't overwrite each iteration
@@ -112,7 +115,7 @@ for m = 1:4
                     % Build labels
     %                 Data.hemi(h).labels(x,1) = subList(sub);
                     Data.hemi(h).labels(x,1) = sub;
-                    Data.hemi(h).labels(x,2) = task;
+                    Data.hemi(h).labels(x,2) = taskInd;
                 end % for h
                 clear Pattern
                 fprintf(1,'Done.\n')

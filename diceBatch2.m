@@ -24,9 +24,12 @@ for a = 1:length(atlasList)
         end
         maxX = length(subList) * length(GLM.task);
         for t = 1:length(GLM.task)
-            fprintf(1,'\tTask %s...',GLM.task(t).name)
-            x = length(subList) * (t-1) + s; % an index
-            % accounts for having per subject per task order
+            taskName = GLM.task(t).name;
+            fprintf(1,'\tTask %s...',taskName)
+            % Reorder output based on this list, not alphabetically
+            [~,~,taskInd] = getConditionFromFilename(taskName);
+            % Calculate row index for per-subject per-task order
+            x = length(subList) * (taskInd-1) + s; % an index
             
             for h = 1:2
                 

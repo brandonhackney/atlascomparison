@@ -79,7 +79,7 @@ switch taskname
         negInd = 1;
         outID = 9;
         numConds = 4;
-        ttype = 'motion';
+        ttype = 'control';
         social = []; % bc it's the same as DynamicFaces, so skip for classification
         motion = [];
         control = [];
@@ -89,7 +89,7 @@ switch taskname
         negInd = 1;
         outID = 7;
         numConds = 2;
-        ttype = 'motion';
+        ttype = 'control';
         social = [];
         motion = 2;
         control = [];

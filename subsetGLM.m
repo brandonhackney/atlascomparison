@@ -1,6 +1,7 @@
 function subsetGLM(subList, atlasList)
 
 % Loads whole-brain GLM data and subsets it, based on atlas
+% Exports a list of significant vertices, but not the values at those verts
 % Loops subject first, THEN atlas
 % Doing it this way lets you keep the subject data in memory longer,
 % which should hopefully speed up the process

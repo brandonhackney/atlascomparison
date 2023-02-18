@@ -20,8 +20,8 @@ if length(fList) ==  1
     NumSubs = size(Data.subID, 1);
 %     taskList = createTaskList(typeName); %social or control
 %     taskIn = findTaskIn(taskList, Data.taskNames); %narrow down to specific conditions
-    [taskIn,taskNames] = taskTypeConv(typeName,Data.taskNames, NumSubs);
-
+    [taskIn,taskNames, labs] = taskTypeConv(typeName,Data.taskNames, NumSubs);
+        labs = labs'; % if not taskNames', then labs'.
     
     data = double(Data.hemi(hemi).data(taskIn,:));
     condlabels = Data.hemi(hemi).labels(taskIn, 2);
@@ -69,9 +69,12 @@ if length(fList) ==  1
         
         %6. Optional step: Create a confusion matrix
         conMat(:,:,i) = confusionmat(testLabels, predicted_label);
-        
+        % labs defined above - uses original sort order
+        % testLabels are indices based on Data.taskNames,
+        % so we need to index from something that length and order.
+        % But Data.taskNames could be cell or char, so we convert to labs.
 %         labs = taskConv(Data.taskNames)'; % can you just use taskNames?
-        labs = taskNames';
+%         labs = taskNames';
         ptlab = [ptlab; labs(testLabels)];
         prlab = [prlab; labs(predicted_label)];
         % Output task names, if asked for (for plotting above)

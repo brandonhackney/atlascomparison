@@ -2,9 +2,12 @@ function [atlasList, varargout] = getAtlasList(atlasGroup)
 % [atlasList, (numIter, numAtlas, numItems)] = getAtlasList(atlasGroup)
 % Input a short code like "null"
 % Get back a cell array list of atlas names
-% Optional outputs return parameters like number of iterations per atlas
+% Optional outputs return these parameters:
+% numIter = number of iterations per atlas (e.g. 50 iterations of 'res150')
+% numAtlas = number of 'atlases', i.e. not including iterations
+% numItems = total length of atlasList (i.e. numIter * numAtlas)
 
-validList = {'atlas','null','sch','res','atlasBIG','nullSMALL'};
+validList = {'atlas','null','sch','res','mres','atlasBIG','nullSMALL'};
 assert(ischar(atlasGroup), 'Input must be a string.');
 assert(ismember(atlasGroup, validList), sprintf('Input options are %s', sprintf('%s, ',validList{:})));
 
@@ -45,6 +48,19 @@ switch atlasGroup
         for a = 1:numItems
             atlasList{a} = ['nullSMALL_',num2str(a,'%04.f')];
         end
+    case 'sch'
+        % The Schaefer atlas at multiple resolutions
+        % The default was 400; this is 100, 200, etc.
+        resList = [100 200 400 600 800 1000];
+        numAtlas = length(resList);
+        numIter = 1;
+        numItems = numAtlas * numIter;
+        atlasList = cell(1,numItems);
+        for a = 1:numItems
+            rnum = resList(a);
+            atlasList{a} = ['schaefer',num2str(rnum)];
+        end
+        
     case 'res'
         % A single iteration of null parcelations at various resolutions
         % Output is e.g. 'res150'
@@ -52,7 +68,7 @@ switch atlasGroup
         numAtlas = length(resList);
         numIter = 1;
         numItems = numAtlas * numIter;
-        for a = numItems:-1:1
+        for a = numItems:-1:1 % work backwards - no need to preallocate
             rnum = resList(a);
             atlasList{a} = ['res',num2str(rnum,'%03.f')];
         end
@@ -61,10 +77,11 @@ switch atlasGroup
         % Multiple iterations of null parcellations at many resolutions
         % Output is e.g. 'res150_0001'
         atlasList = [];
-        resList = [150 125 100 75 50 25 10 5 2];
+%         resList = [150 125 100 75 50 25 10 5 2];
+        resList = [5 10 25 50 75 100 125 150];
         numAtlas = length(resList);
         numIter = 50; % how many of each resolution?
-        numItems = numAtlas * numIter; % total number of things
+        numItems = numAtlas * numIter;
         for r = length(resList):-1:1
             rnum = resList(r);
             rname = ['res',num2str(rnum,'%03.f')];
@@ -73,6 +90,14 @@ switch atlasGroup
                 atlasList{a} = [rname '_' num2str(n-1,'%04.f')];
             end
         end
+        
+    case 'fake'
+        % idk I think this is the randomized data I never made?
+        % including anyway for support purposes
+        atlasList = {'fake'};
+        numAtlas = 1;
+        numIter = 1;
+        numItems = length(atlasList);
 
 end % switch
 
@@ -80,17 +105,17 @@ end % switch
 if nargout > 1
     % The number of iterations per 'atlas'
     % e.g. if you have 3 resolutions with 10 iterations each, this is 10
-    varargout{2} = numIter;
+    varargout{1} = numIter;
 end
 if nargout > 2
     % The number of iteration groups
     % e.g. if you have 3 resolutions with 10 iterations each, this is 3
-    varargout{3} = numAtlas;
+    varargout{2} = numAtlas;
 end
 if nargout > 3
     % The total number of items in atlasList
     % Kind of useless since you can just do length(atlasList)
-    varargout{1} = numItems;
+    varargout{3} = numItems;
 end
 
 end

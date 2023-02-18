@@ -39,57 +39,7 @@ else
 end
 
 % Specify the names of the atlases to use
-atlasList = [];
-switch atlasGroup
-    case 'null'
-        % 1000 random iterations of 173 parcels per hemisphere
-        numIter = 1000;
-        numAtlas = 1; % 1000 iterations of 1 resolution
-        numNulls = numIter * numAtlas;
-        % Specify the names of the null atlases
-        atlasList = cell(1,numNulls);
-        for a = 1:numNulls
-            atlasList{a} = ['null_',num2str(a,'%04.f')];
-        end
-    case 'res'
-        % A single iteration of null parcelations at various resolutions
-        resList = [150 125 100 75 50 25 10 5 2];
-        numAtlas = length(resList);
-        numIter = 1;
-        numNulls = numAtlas * numIter;
-        for a = numNulls:-1:1
-            rnum = resList(a);
-            atlasList{a} = ['res',num2str(rnum,'%03.f')];
-        end
-
-    case 'mres'
-        % Multiple iterations of null parcellations at many resolutions
-        atlasList = [];
-        resList = [150 125 100 75 50 25 10 5 2];
-        numAtlas = length(resList);
-        numIter = 50; % how many of each resolution?
-        numNulls = numAtlas * numIter; % total number of things
-        for r = length(resList):-1:1
-            rnum = resList(r);
-            rname = ['res',num2str(rnum,'%03.f')];
-            for n = numIter:-1:1
-                a = (r-1) * numIter + n; % calc nested position
-                atlasList{a} = [rname '_' num2str(n-1,'%04.f')];
-            end
-        end
-    case 'atlas'
-        % The original 4 atlases we used
-        atlasList = {'schaefer400', 'glasser6p0', 'gordon333dil', 'power6p0'};
-        numAtlas = 4;
-        numIter = 1;
-        numNulls = numAtlas * numIter;
-    case 'atlasBIG'
-        % The original 4 atlases we used, but do the parcel selection step 
-        atlasList = {'schaeferBIG', 'glasserBIG', 'gordonBIG', 'powerBIG'};
-        numAtlas = 4;
-        numIter = 1;
-        numNulls = numAtlas * numIter;
-end
+[atlasList, ~, ~, numNulls] = getAtlasList(atlasGroup);
 
 % Call this python script to build the null atlases, if specified by the user. 
 % It iterates 1000 times on its own
@@ -112,7 +62,7 @@ if createNulls == 1
     for hemi = 1:2
         for null = 1:numNulls
             nullfNameNoHem = [atlasList{null},'.annot'];
-
+            fprintf(1,'Generating template POI from %s\n',nullfNameNoHem)
             Cfg.SUBJECTS_DIR = fullfile(p.baseDataPath, subj,'fs');
             Cfg.projectDir = Cfg.SUBJECTS_DIR;
             Cfg.atlas = nullfNameNoHem;
