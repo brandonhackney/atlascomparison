@@ -1,3 +1,4 @@
+function diceBatch2(subList, atlasList)
 % This differs from the original diceBatch by outputting classifiable data
 % That is, the output matches the format of the other Classify_X files
 % Only a single metric is given - percentage of parcel that has GLM in it
@@ -6,10 +7,8 @@
 % And we may want to use those calculations later on
 
 % Setup
-subList = [1 2 3 4 5 6 7 8 10 11]; % array of subject numbers
-
-atlasList = {'schaefer400','glasser6p0','gordon333dil','power6p0'}; % cell array of atlas names
-homedir = pwd;
+pth = specifyPaths;
+homedir = pth.basePath;
 fprintf(1,'\n\nStarting Dice Coefficient calculations...')
 
 for a = 1:length(atlasList)
@@ -17,20 +16,29 @@ for a = 1:length(atlasList)
     fprintf(1,'Atlas %s:\n',atlas)
     for s = 1:length(subList)
         fprintf(1,'Subject %i:\n',subList(s))
-        fname = [homedir filesep 'class' filesep 'data' filesep 'Classify_meanB_' atlas '_effect.mat'];
-        load(fname)
-        load([homedir filesep 'ROIs' filesep 'GLM' filesep 'STS' num2str(subList(s)) '_GLMs_' atlas '.mat']);
+        fname = fullfile(pth.classifyDataPath, ['Classify_meanB_' atlas '.mat']);
+        Data = importdata(fname); % template class file
+        GLM = importdata([homedir filesep 'ROIs' filesep 'GLM' filesep 'STS' num2str(subList(s)) '_GLMs_' atlas '.mat']);
         if s == 1
             Summary = Data;
         end
-        
+        maxX = length(subList) * length(GLM.task);
         for t = 1:length(GLM.task)
-            fprintf(1,'\tTask %s...',GLM.task(t).name)
-            x = length(subList) * (t-1) + s; % an index
-            % accounts for having per subject per task order
+            taskName = GLM.task(t).name;
+            fprintf(1,'\tTask %s...',taskName)
+            % Reorder output based on this list, not alphabetically
+            [~,~,taskInd] = getConditionFromFilename(taskName);
+            % Calculate row index for per-subject per-task order
+            x = length(subList) * (taskInd-1) + s; % an index
             
             for h = 1:2
-                for p = 1:length(Data.hemi(h).parcelInfo(s).parcels)
+                
+                numP = length(Data.hemi(h).parcelInfo(s).parcels);
+                if s == 1 && t == 1
+                    % Ensure no old data is left over from load
+                    Summary.hemi(h).data = zeros([maxX,numP]);
+                end
+                for p = 1:numP
                 % Return the percentage of the parcel that overlaps the GLM zone
                     Summary.hemi(h).data(x,p) = length(intersect(Data.hemi(h).parcelInfo(s).parcels(p).vertices,GLM.task(t).hem(h).cluster)) / length(Data.hemi(h).parcelInfo(s).parcels(p).vertices);
                     
@@ -42,9 +50,10 @@ for a = 1:length(atlasList)
     end % for s subject
     % Export results to /class/data/
     Data = Summary; clear Summary
-    fname = [homedir filesep 'class' filesep 'data' filesep 'Classify_overlap_' atlas '.mat'];
+    fname = fullfile(pth.classifyDataPath,['Classify_overlap_' atlas '.mat']);
     save(fname,'Data');
     fprintf(1,'Atlas %s exported to %s\n\n',atlas,fname)
 end % for a atlas
 
 fprintf(1,'\n\nDice Coefficients done calculating.\n\n')
+end

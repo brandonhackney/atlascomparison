@@ -1,3 +1,4 @@
+function classSetup(subList, atlasList)
 % Prepare data for classification
 % Reads in individual subject-atlas data files and combines per atlas
 % Strips out unnecesary variables so that classification data is light
@@ -5,21 +6,19 @@
 % (because there's an outer loop for task)
 
 % Key variables
-
-%%% These need to be manually adjusted!! %%%
-subList = [1 2 3 4 5 6 7 8 10 11]; % Update this if new data comes in
-    % Generate subIDs
-    for s = 1:length(subList)
-        subIDs(s,:) = pad(['STS',num2str(subList(s))],5);
-    end
-load('getFilePartsFromContrast.mat');
+numSubs = length(subList);
+for s = 1:numSubs % gen sub IDs
+    subIDs(s,:) = pad(['STS',num2str(subList(s))],5);
+end
+load('getFilePartsFromContrast.mat'); % get list of contrasts
 numTasks = length(conditionList); % excludes RestingState
-atlasList = {'schaefer400','gordon333dil','glasser6p0','power6p0'};
-%%% These need to be manually adjusted!! %%%
+
+maxX = numSubs * numTasks; % counts per-task per-sub
 
 % Paths
-basedir = pwd;
-outputdir = [basedir filesep 'class' filesep 'data' filesep];
+pths = specifyPaths;
+basedir = pths.basePath;
+outputdir = pths.classifyDataPath;
 datadir = [basedir filesep 'ROIs' filesep];
 
 for m = 1:4
@@ -49,7 +48,7 @@ for m = 1:4
         for task = 1:numTasks
             fprintf(1,'\t\tTask %i of %i\n',task,numTasks)
             goodSub = 0;
-            for sub = 1:length(subList)
+            for sub = 1:numSubs
                 % **REMEMBER** that this is an index, since we skip 9
                 
                 % Skip subs if they don't have a data file
@@ -67,33 +66,42 @@ for m = 1:4
 
                 % Load data
                 inname = [datadir 'STS' num2str(subList(sub)) '_' atlasList{atlas} '.mat'];
-                load(inname)
-                
+                load(inname) % as Pattern
+                % Get output order from filename
+                taskName = Pattern.task(task).name;
+                [~,~,taskInd] = getConditionFromFilename(taskName);
                 % On first good run, insert constant info
                 if goodSub == 1 &&  ~strcmp(Pattern.task(task),'RestingState')
                     % Insert task name for this task
-                    Data.taskNames(task,:) = pad(Pattern.task(task).name,12);
+                    Data.taskNames(taskInd,:) = pad(Pattern.task(task).name,12);
                 end
 
                 % Parcel info
+                numParcels = zeros([2,1]); % preallocate
                 for h = 1:2
                     % 1 = left, 2 = right
-                    for p = 1:length(Pattern.task(task).hem(h).data)
+                    Data.hemi(h).parcelInfo(sub).subID = subList(sub);
+                    
+                    numParcels(h) = length(Pattern.task(task).hem(h).data);
+                    for p = numParcels(h):-1:1 % Backwards! to pseudo-preallocate
                         % I really hate structs like why can't I just
                         % grab the whole goddamn field at once
-                    Data.hemi(h).parcelInfo(sub).subID = subList(sub);
                     Data.hemi(h).parcelInfo(sub).parcels(p).name = Pattern.task(task).hem(h).data(p).label;
                     Data.hemi(h).parcelInfo(sub).parcels(p).vertices = Pattern.task(task).hem(h).data(p).vertices;
-                    Data.hemi(h).parcelInfo(sub).parcels(p).vertexCoord = Pattern.task(task).hem(h).data(p).vertexCoord;
-                    Data.hemi(h).parcelInfo(sub).parcels(p).ColorMap = Pattern.task(task).hem(h).data(p).ColorMap;
+%                     Data.hemi(h).parcelInfo(sub).parcels(p).vertexCoord = Pattern.task(task).hem(h).data(p).vertexCoord;
+%                     Data.hemi(h).parcelInfo(sub).parcels(p).ColorMap = Pattern.task(task).hem(h).data(p).ColorMap;
                     end % for p
                 end % for h
 
                 
                 % Build data
-                x = length(subList) * (task-1) + sub; % an index
+                x = numSubs * (taskInd-1) + sub; % an index
                     % accounts for having per subject per task order
                 for h = 1:2
+                    % preallocate, but don't overwrite each iteration
+                    if task == 1 && goodSub == 1
+                        Data.hemi(h).data = zeros([maxX,numParcels(h)]);
+                    end
                     switch metric
                         case 'meanB'
                             Data.hemi(h).data(x,:) = double([Pattern.task(task).hem(h).data(:).meanEffect]);
@@ -107,7 +115,7 @@ for m = 1:4
                     % Build labels
     %                 Data.hemi(h).labels(x,1) = subList(sub);
                     Data.hemi(h).labels(x,1) = sub;
-                    Data.hemi(h).labels(x,2) = task;
+                    Data.hemi(h).labels(x,2) = taskInd;
                 end % for h
                 clear Pattern
                 fprintf(1,'Done.\n')
@@ -116,11 +124,12 @@ for m = 1:4
         end % for task
 
         % Export atlas file
-        outname = [outputdir 'Classify_' metric '_' atlasList{atlas} '_effect.mat'];
+        outname = [outputdir 'Classify_' metric '_' atlasList{atlas} '.mat'];
         save(outname, 'Data');
         fprintf(1,'\tAtlas %s exported to %s\n',atlasList{atlas},outname)
     end % for atlas
     fprintf(1,'Metric %s done.\n',metric)
 end % for m (for metric)
 
-fprintf(1,'\n\n Job''s finished!\n')
+fprintf(1,'\n\n Finished generating classification files!\n')
+end

@@ -8,7 +8,7 @@ function [isused, usednames, varargout] = taskTypeConv(taskType, taskList, numSu
 z = whos('taskList');
 
 if strcmp(z.class,'cell')
-    numTasks = size(taskList,2);
+    numTasks = numel(taskList);
 elseif strcmp(z.class,'char')
     numTasks = size(taskList,1);
 end
@@ -40,9 +40,9 @@ for i = 1:numTasks
     % standardize the list of task names
     names{i} = taskName;
 end
-isused = logical(isused);
+isused = logical(isused); % output 1
 % Export a list of KEPT names, since 'names' is just all names in order.
-usednames = names(logical(keep));
+usednames = names(logical(keep)); % output 2
     if nargout > 2
         varargout{1} = names; % regular names
     end
