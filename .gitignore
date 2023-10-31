@@ -15,8 +15,9 @@
 # I've made a suite of functions to do unit tests etc.
 # and 99% of them don't need to be published
 QC_*.m
-test_*.m
+test*.m
 *_test.m
+QC_*.txt
 
 # Scrapped Ideas #
 ##################
@@ -27,6 +28,7 @@ test_*.m
 /class/attempt*/
 wbFC*.m
 FC*.m
+null_FC*.m
 
 # Packages #
 ############
