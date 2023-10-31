@@ -1,5 +1,5 @@
 function varargout = null_atlasClassify_Batch(varargin)
-% [score] = null_atlasClassify_Batch([atlasStyle], [omni/post], [taskTypes])
+% [score], [chance%], [stdError] = null_atlasClassify_Batch([atlasStyle], [omni/post], [taskTypes])
 %
 % Runs atlasClassify on multiple atlases, plotting results
 % Default is omnibus classification of normal atlases
@@ -9,8 +9,8 @@ function varargout = null_atlasClassify_Batch(varargin)
 % omni is one of: omni, post
 % taskTypes is one of: social, motion, control, or all
 
-clc;
-close all;
+% clc;
+% close all;
 % add root to path
 p = specifyPaths;
 % addpath(p.classifyPath);
@@ -46,13 +46,17 @@ numIter = 1; % default
 
 switch style
     case 'atlas'
-        figLabels = {'Gls', 'Grd', 'Pwr', 'Sch'};
-        atlasname = {'Glasser', 'Gordon', 'Power', 'Schaefer'};
-        atlasID = {'glasser6p0', 'gordon333dil', 'power6p0', 'schaefer400'};
+        figLabels = {'Sch', 'Gls', 'Grd', 'Pwr'};
+        atlasname = {'Schaefer', 'Glasser', 'Gordon', 'Power'};
+        atlasID = {'schaefer400','glasser6p0', 'gordon333dil', 'power6p0'};
     case 'sch'
         figLabels = {'100','200','400','600','800','1k'};
         atlasname = {'Schaefer 100', 'Schaefer 200', 'Schaefer 400', 'Schaefer 600', 'Schaefer 800', 'Schaefer 1,000'};
         atlasID = {'schaefer100','schaefer200','schaefer400','schaefer600','schaefer800','schaefer1000'};
+    case 'schnull'
+        figLabels = {'100','200','400','600','800','1k'};
+        atlasname = {'Null 100', 'Null 200', 'Null 400', 'Null 600', 'Null 800', 'Null 1,000'};
+        atlasID = {'schnull0100','schnull0200','schnull0400','schnull0600','schnull0800','schnull1000'};
     case {'res', 'mres'} % if either of these
         figLabels = {'010', '020', '050', '100', '150', '200', '250', '300'};
         atlasname = {'10 Parcels', '20 Parcels', '50 Parcels', '100 Parcels', '150 Parcels', '200 Parcels', '250 Parcels', '300 Parcels'};
@@ -66,9 +70,9 @@ switch style
         atlasname = {'Null'};
         atlasID = {'nullSMALL'};
     case 'atlasBIG'
-        figLabels = {'Gls', 'Grd', 'Pwr', 'Sch'};
-        atlasname = {'Glasser', 'Gordon', 'Power', 'Schaefer'};
-        atlasID = {'glasserBIG', 'gordonBIG', 'powerBIG', 'schaeferBIG'};
+        figLabels = {'Sch', 'Gls', 'Grd', 'Pwr'};
+        atlasname = {'Schaefer', 'Glasser', 'Gordon', 'Power'};
+        atlasID = {'schaeferBIG', 'glasserBIG', 'gordonBIG', 'powerBIG'};
     case 'fake'
         figLabels = {'Fake'};
         atlasname = {'Fake'};
@@ -125,6 +129,13 @@ numMetrics = size(metricID,2);
 numAtlases = size(atlasID,2);
 hemstr = {'LH','RH'};
 
+% Get number of subjects by temporarily loading a data file
+    tfname = sprintf('Classify_%s_%s.mat', metricID{1}, atlasfName{1});
+    tfpath = fullfile(p.classifyDataPath, tfname);
+    Data = importdata(tfpath);
+    numSubs = length(Data.subID);
+    clear Data tfname tfpath;
+
 %% TEMP
 % Subset to the top or bottom 50, based on an external variable
 % THis worked in conjunction with something else, but I've forgotten what..
@@ -138,7 +149,12 @@ hemstr = {'LH','RH'};
 % end
 
 %% Calculate accuracy for each atlas
+% Preallocate score with nans
+% This way, skip trials don't get set to 0 and included in means
+score = nan([numMetrics, numSubs, numAtlases, 2, numIter]);
+
 for h = 1:2
+%     figure(); % to contain the plots from makeSVMweights
     for m = 1:numMetrics
        for a = 1:numAtlases
            confMats{m,a,h} = 0;
@@ -148,6 +164,8 @@ for h = 1:2
                f = nestedPosition(a,iter,numIter);
                % If this iter is on the naughty list, then skip it
                if naughtyList(f, h)
+                   % Maybe unnecessary but I'm being CAREFUL
+                   score(m, :, a, h, iter) = NaN;
                    continue
                end
                
@@ -166,65 +184,104 @@ for h = 1:2
 
 end % for hemisphere
 
-%% COLLAPSE ITERATIONS
-if numIter ~= 1
-    % If you have multiple iterations, collapse them now
-    % This moves dim5 iteration to position 3 next to fold,
-    % Then reshapes to collapse fold and iteration together,
-    % Preserving the original shape before iteration was added
-    % Use dims 3 and 4 bc we measure size before permute
-    % Really want dims 4 and 5 of the permuted matrix
-    % DO NOT SQUEEZE - that removes singleton dimensions, not empty cells
-    scsz = size(score);
-    score = reshape(permute(score, [1 2 5 3 4]), scsz(1),[],scsz(3),scsz(4));
-end
+%% AVERAGE ACROSS FOLDS
+% We need to average across all the SVM folds, because:
+% 1. They are not meaningful individually, and
+% 2. leaving them overloads RAM when calculating ANOVA
+% the anovan() function converts your data into a square matrix,
+% and when there are half a million datapoints to start with,
+% you end up with a ~70GB correlation matrix.
+% Averaging over fold reduces that by an order of magnitude.
+% Result should be m metrics * 1 fold * a atlases * 2 hem * i iterations
+errorTerm = std(score,0,2, 'omitnan') ./ sqrt(numSubs);
+score = mean(score, 2);
 
-%% Multiway ANOVA (more flexible than anova2)
-% Include hemisphere as a factor instead of testing separately
-% Can specify model parameters and variable names like an adult
-% BUT need to flatten out to a 1xn vector; it can't take a matrix :(
-% y is 1xn elements long, and so too must be each g in {g1,g2...gx}
-% if numIter == 1
-    % Avoid this code for the null and multires data
-    % The matrices are too big and our server freezes
-    y = reshape(score,1,numel(score)); %reads rows, then cols, then pages etc
-    mtrc = zeros(size(score));
-        for e = 1:size(score,1)
-            mtrc(e,:,:,:) = e;
-        end
-        mtrc = reshape(mtrc,1,numel(mtrc));
-        mtrc = metricID(mtrc);
-    fld = zeros(size(score));
-        for e = 1:size(score,2)
-            fld(:,e,:,:) = e;
-        end
-        fld = reshape(fld,1,numel(fld));
-    atls = zeros(size(score));
-        for e = 1:size(score,3)
-            atls(:,:,e,:) = e;
-        end
-        atls = reshape(atls,1,numel(atls));
-        atls = atlasname(atls); % check this works
-    hms = zeros(size(score));
-        for e = 1:size(score,4)
-            hms(:,:,:,e) = e;
-        end
-        hms = reshape(hms,1,numel(hms));
-        HMLST = {'LH' 'RH'};
-        hms = HMLST(hms);
-        
+% Now drop the fold dimension, so that it becomes m * a * h * i
+scsz = size(score);
+scsz(2) = [];
+score = reshape(score, scsz);
+errorTerm = reshape(errorTerm, scsz);
+% Now, any variability comes from the iteration dimension
+% If numIter == 1, you have point estimates for each metric+atlas+hem cell
 
-    varnames = {'Metric','Fold','Atlas','Hemisphere'};
-    % Which of the above variables is a random effect?
-    rfx = 2; % just fold
-    [pval,tbl,stats] = anovan(y,{mtrc fld atls hms},'model','interaction','varnames',varnames,'random',rfx);
-    % figure();
-    % [php, phm, phg] = multcompare(stats, 'Dimension', [1,3]); % come back and play with this - change which dims to compare
 
-% end % if not null or res
-%% Make per-hemisphere figures
-for h = 1:2
-    hem = hemstr{h};
+% % !! I have substantially changed the shape of my main variable !!
+% % Any code after this needs to be debugged - commenting it all out for now.
+% 
+% y = score;
+% 
+% %% COLLAPSE ITERATIONS
+% if numIter ~= 1
+%     % If you have multiple iterations, collapse them now
+%     % This moves dim5 iteration to position 3 next to fold,
+%     % Then reshapes to collapse fold and iteration together,
+%     % Preserving the original shape before iteration was added
+%     % Use dims 3 and 4 bc we measure size before permute
+%     % Really want dims 4 and 5 of the permuted matrix
+%     % DO NOT SQUEEZE - that removes singleton dimensions, not empty cells
+%     scsz = size(score);
+%     score = reshape(permute(score, [1 2 5 3 4]), scsz(1),[],scsz(3),scsz(4));
+%     y = reshape(permute(y, [1 2 5 3 4]), scsz(1),[],scsz(3),scsz(4));
+% end
+% 
+% 
+% 
+% %% Multiway ANOVA (more flexible than anova2)
+% % Include hemisphere as a factor instead of testing separately
+% % Can specify model parameters and variable names like an adult
+% % BUT need to flatten out to a 1xn vector; it can't take a matrix :(
+% % y is 1xn elements long, and so too must be each g in {g1,g2...gx}
+% % if numIter == 1
+% 
+%     y = single(y); % reduce memory load
+%     % Set up your design matrix by labeling each dimension of y
+%     % Use the size of y before it gets reshaped into a vector
+%     mtrc = zeros(size(y));
+%         for e = 1:size(y,1)
+%             mtrc(e,:,:,:) = e;
+%         end
+%         mtrc = reshape(mtrc,1,numel(mtrc));
+%         mtrc = metricID(mtrc);
+% %     fld = zeros(size(score));
+% %         for e = 1:size(score,2)
+% %             fld(:,e,:,:) = e;
+% %         end
+% %         fld = reshape(fld,1,numel(fld));
+%     atls = zeros(size(y));
+%         for e = 1:size(y,3)
+%             atls(:,:,e,:) = e;
+%         end
+%         atls = reshape(atls,1,numel(atls));
+%         atls = atlasname(atls); % check this works
+%     hms = zeros(size(y));
+%         for e = 1:size(y,4)
+%             hms(:,:,:,e) = e;
+%         end
+%         hms = reshape(hms,1,numel(hms));
+%         HMLST = {'LH' 'RH'};
+%         hms = HMLST(hms);
+%     
+%     % Define design matrix
+% %     dMatrix = {mtrc fld atls hms};
+% %     varnames = {'Metric','Fold','Atlas','Hemisphere'};
+%     dMatrix = {mtrc atls hms};
+%     varnames = {'Metric', 'Atlas', 'Hemisphere'};
+%     % Which of the above variables is a random effect?
+% %     rfx = 2; % just fold
+% 
+%     % Convert input data to a 1-D vector
+%     y = reshape(y,1,numel(y)); %reads rows, then cols, then pages etc
+% %     [pval,tbl,stats] = anovan(y,dMatrix,'model','interaction','varnames',varnames,'random',rfx);
+%     [pval,tbl,stats] = anovan(y,dMatrix,'model','interaction','varnames',varnames);
+%     
+%     % Graph post-hoc tests to inspect any significant interactions
+% %     figure();
+% %     [php, phm, phg] = multcompare(stats, 'Dimension', [1,3]); % come back and play with this - change which dims to compare
+% 
+% % end % if not null or res
+% % %% Make per-hemisphere figures
+% for h = 1:2
+%     hem = hemstr{h};
 % Generate CONFUSION MATRICES for each atlas-metric combination
 % in confMats, j is metric and k is atlas
 % each cell of confMats is task x task x subject
@@ -272,24 +329,24 @@ for h = 1:2
 % Generate a confusion chart, and cluster the tasks
 % Requires Matlab R2018b or higher
 % if ~strcmp(style,'null')
-figure()
-%     ha = tight_subplot(numMetrics, numAtlases);
-    for j = 1:numMetrics
-        for k = 1:numAtlases
-        g = k + (j-1)*numAtlases;
-        subplot(numMetrics,numAtlases,g)
-%         axes(ha(g));
-        cm1 = confusionchart(truLab{j,k,h}, prdLab{j,k,h});
-%         sortClasses(cm1,'cluster'); % can set a vector of display order
-%         sortClasses(cm1,{'AVLocal', 'Bio-Motion','ComboLocal','DynamicFaces','SocialLocal','ToM','MTLocal','Motion-Faces','Objects','Speech','BowtieRetino'});
-        sortClasses(cm1,usedTaskList);
-        % Give percentage of times, normalized to the class, not prediction
-        % ie I don't care how many times you guessed X,
-        % I care how many times you missed X and what you guessed instead
-        cm1.Normalization = 'row-normalized';
-            title(sprintf('%s, %s for %s', hem, strrep(mFig{j},'_',' '),atlasname{k}));
-        end % for k
-    end % for j
+% figure()
+% %     ha = tight_subplot(numMetrics, numAtlases);
+%     for j = 1:numMetrics
+%         for k = 1:numAtlases
+%         g = k + (j-1)*numAtlases;
+%         subplot(numMetrics,numAtlases,g)
+% %         axes(ha(g));
+%         cm1 = confusionchart(truLab{j,k,h}, prdLab{j,k,h});
+% %         sortClasses(cm1,'cluster'); % can set a vector of display order
+% %         sortClasses(cm1,{'AVLocal', 'Bio-Motion','ComboLocal','DynamicFaces','SocialLocal','ToM','MTLocal','Motion-Faces','Objects','Speech','BowtieRetino'});
+%         sortClasses(cm1,usedTaskList);
+%         % Give percentage of times, normalized to the class, not prediction
+%         % ie I don't care how many times you guessed X,
+%         % I care how many times you missed X and what you guessed instead
+%         cm1.Normalization = 'row-normalized';
+%             title(sprintf('%s, %s for %s', hem, strrep(mFig{j},'_',' '),atlasname{k}));
+%         end % for k
+%     end % for j
     
 % end % if not null
     
@@ -311,38 +368,48 @@ figure()
 %             xlim([0,11]);
 %         end % for k
 %     end % for j
-
-
- % Generate BOXPLOTS comparing classification accuracies by metric
-    fig = figure();
-    fig.Color = [1,1,1]; % white background
-    for m = 1:numMetrics
-       
-       subplot(1, numMetrics, m), boxplot(squeeze(score(m, :, :, h))); 
-       ax = gca;
-       xticklabels(figLabels);
-       title(sprintf('%s %s',strrep(mFig{m},'_',' '),hem));
-       ylim([-5,100]); % had a buffer of 105 at the top, but I like 100 better
-       yticks([0:10:100]);
-       chper = 100 * (1/length(taskNames)); % chance = 1/numTasks
-       % round floating-point to 2 decimals: %.2f
-       if m == 1; ylabel(sprintf('Classification Accuracy (chance = %.2f%%)', chper)); end
-       box off; % remove right- and top- axes
-       ax.TickLength = [0,0];
-       ax.YGrid = 'on'; % just show horizontal lines
-       wh = findobj('LineStyle', '--');
-        set(wh,'LineStyle', '-'); % make whiskers not dashed
-        set(wh,'Color',[0.5 0.5 0.5]); % set whisker color to 50% gray
-        % Find and remove whisker caps
-        bh = ax.Children.Children; allTags = get(bh, 'tag'); isCap = contains(allTags,'Adjacent'); delete(bh(isCap));
-        clear bh allTags isCap
-        % Insert chance accuracy line
-        hold on
-            xval = 0:numel(figLabels)+1;
-            yval = repmat(chper, [1, length(xval)]);
-            line(xval,yval);
-        hold off
-    end % for metric
+% 
+% scsz = size(score);
+%  % Generate BOXPLOTS comparing classification accuracies by metric
+%     fig = figure();
+%     fig.Color = [1,1,1]; % white background
+%     for m = 1:numMetrics
+%        % Use reshape instead of squeeze in case of [1,1,x,1]
+%        % That would end up with [x,1] instead of [1,x]
+%         thisData = score(m,:,:,h);
+%        thisData = reshape(thisData, [scsz(2),scsz(3)]);
+%        % Hack solution to force it to make multiple boxplots
+%        % If only 1 row, it makes a single box
+%        % So double the data along dim1 so it makes all boxes
+%        if numel(thisData) == numAtlases
+%            thisData(2,:) = thisData(1,:);
+%        end
+% %        subplot(1, numMetrics, m), boxplot(squeeze(score(m, :, :, h)));
+%        subplot(1, numMetrics, m), boxplot(thisData);
+%        ax = gca;
+%        xticklabels(figLabels);
+%        title(sprintf('%s %s',strrep(mFig{m},'_',' '),hem));
+%        ylim([-5,100]); % had a buffer of 105 at the top, but I like 100 better
+%        yticks([0:10:100]);
+%        chper = 100 * (1/length(taskNames)); % chance = 1/numTasks
+%        % round floating-point to 2 decimals: %.2f
+%        if m == 1; ylabel(sprintf('Classification Accuracy (chance = %.2f%%)', chper)); end
+%        box off; % remove right- and top- axes
+%        ax.TickLength = [0,0];
+%        ax.YGrid = 'on'; % just show horizontal lines
+%        wh = findobj('LineStyle', '--');
+%         set(wh,'LineStyle', '-'); % make whiskers not dashed
+%         set(wh,'Color',[0.5 0.5 0.5]); % set whisker color to 50% gray
+%         % Find and remove whisker caps
+%         bh = ax.Children.Children; allTags = get(bh, 'tag'); isCap = contains(allTags,'Adjacent'); delete(bh(isCap));
+%         clear bh allTags isCap
+%         % Insert chance accuracy line
+%         hold on
+%             xval = 0:numel(figLabels)+1;
+%             yval = repmat(chper, [1, length(xval)]);
+%             line(xval,yval);
+%         hold off
+%     end % for metric
 
 % % Generate a histogram aggregating classification accuracy across atlases
 % % Use score, which is metric x subject x atlas x hemi
@@ -362,33 +429,40 @@ figure()
 %     clear j
 % % This is no longer useful, now that we've collapsed iteration and atlas
 
-end % for h
+% end % for h
 
-
-% % Generate a bar graph comparing classification accuracy between atlases
-% % Use score, which is metric x subject x atlas
-% % And maybe instead of subplotting, you have different color bars per atlas
-% figure()
-% for j = 1:m
-%     subplot(1,m,j)
-%         bar(squeeze(mean(score(j,:,:),2)));
-%         % add error bars
-% %         hold on
-% %         errorbar(score(j,:,:)); % this is wrong
-% %         % you need to give it x values, min of bar, and height of bar
-% %         % so manually calculate the quantiles or whatever first
-% %         hold off
-%         xticklabels(figLabels);
-%         title(sprintf('Metric = %s',metricID{j}));
-%         xlabel('Atlas');
-%         ylabel('Mean Classification accuracy');
-%         ylim([0,100]);
-% end
-% clear j
+% 
+% % % Generate a bar graph comparing classification accuracy between atlases
+% % % Use score, which is metric x subject x atlas
+% % % And maybe instead of subplotting, you have different color bars per atlas
+% % figure()
+% % for j = 1:m
+% %     subplot(1,m,j)
+% %         bar(squeeze(mean(score(j,:,:),2)));
+% %         % add error bars
+% % %         hold on
+% % %         errorbar(score(j,:,:)); % this is wrong
+% % %         % you need to give it x values, min of bar, and height of bar
+% % %         % so manually calculate the quantiles or whatever first
+% % %         hold off
+% %         xticklabels(figLabels);
+% %         title(sprintf('Metric = %s',metricID{j}));
+% %         xlabel('Atlas');
+% %         ylabel('Mean Classification accuracy');
+% %         ylim([0,100]);
+% % end
+% % clear j
 
 % OUTPUT
 if nargout > 0
     varargout{1} = score;
 end
+if nargout > 1
+    % Export chance percentage
+    varargout{2} = 1/numel(taskNames);
+end
+if nargout > 2
+    % Export standard error over fold
+    varargout{3} = errorTerm;
 
 end
