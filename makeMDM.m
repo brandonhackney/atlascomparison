@@ -28,6 +28,7 @@ for h = 1:2
             sub = subIDList{s};
             ssmPath = [paths.baseDataPath 'John-Analysis-Folders' filesep sub '-Analysis' filesep];
             sdmPath = [paths.baseDataPath 'deriv' filesep sub filesep];
+%             sdmPath = ssmPath; % try replicating John's results
             
             fprintf(1,'\n\t%s: \n',sub);
             
@@ -43,6 +44,7 @@ for h = 1:2
             
             for r = 1:numRuns
                 ssm = [ssmPath sub '_' hem '_SMOOTHWM_HIRES_SPH_GROUPALIGNED.ssm'];
+%                 ssm = [ssmPath 'HIRES-SPHERE_IDENTITY.ssm']; %alternative
                 % Make sure you can get the specific run you want
                 % JUST IN CASE one is missing and throws the indexing off
                 mtcFile = [mtcList(r).folder filesep mtcList(r).name];
@@ -151,8 +153,10 @@ for h = 1:2
             fprintf(f, '\nFileVersion:\t\t  3');
             fprintf(f, '\nTypeOfFunctionalData: MTC');
             fprintf(f, '\n\nRFX-GLM:\t\t\t  1');
-            fprintf(f, '\n\nPSCTransformation:\t  1');
-            fprintf(f, '\nzTransformation:\t  0');
+%             fprintf(f, '\n\nPSCTransformation:\t  1');
+%             fprintf(f, '\nzTransformation:\t  0');
+            fprintf(f, '\n\nPSCTransformation:\t  0');
+            fprintf(f, '\nzTransformation:\t  1');
             fprintf(f, '\nSeparatePredictors:\t  2');
             fprintf(f, '\n\nNrOfStudies:\t\t  %i',numFiles);
         % Body:
