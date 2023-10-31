@@ -38,7 +38,7 @@ for h = 1:2
         
         % OPTIONS
         opts = ['-sdir ' outpath ];
-        if contains(fname,'null')
+        if strcmp(fname(1:5),'null_')
             % We defined a custom color table so names are same
             opts = [opts ' -t /data1/fssubdir/null174_mycolortable.txt'];
         else
