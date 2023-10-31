@@ -19,9 +19,9 @@ test*.m
 *_test.m
 QC_*.txt
 
-# Scrapped Ideas #
-##################
-# Ignore dead project ideas, like whole-brain FC analysis
+# Misc #
+########
+# Other project-related files we don't want to track, but do want to keep
 # Ideally these would have been on a separate branch, but...
 /wholebrainFC/
 /antiquatedFC/
@@ -29,6 +29,7 @@ QC_*.txt
 wbFC*.m
 FC*.m
 null_FC*.m
+pathdef.m
 
 # Packages #
 ############
