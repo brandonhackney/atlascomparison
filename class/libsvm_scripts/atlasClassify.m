@@ -18,7 +18,6 @@ fList = dir(strcat(p.classifyDataPath, filesep, '*', metricID, '*', atlasID, '.m
 if length(fList) ==  1
     load([fList.folder filesep fList.name]);
     NumSubs = size(Data.subID, 1);
-%     taskList = createTaskList(typeName); %social or control
 %     taskIn = findTaskIn(taskList, Data.taskNames); %narrow down to specific conditions
     [taskIn,taskNames, labs] = taskTypeConv(typeName,Data.taskNames, NumSubs);
         labs = labs'; % if not taskNames', then labs'.
