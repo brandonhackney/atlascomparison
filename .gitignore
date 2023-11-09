@@ -50,6 +50,7 @@ pathdef.m
 *.sql
 *.sqlite
 *_log.txt
+diary
 
 # OS generated files #
 ######################
