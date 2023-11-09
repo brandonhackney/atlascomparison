@@ -18,14 +18,15 @@ Some of these scripts start with a few assumptions, and will require tweaking be
 4. We assume all functional data has been flattened out into a single folder per subject (i.e. there is no folder structure separating different tasks), so that we can use a single ``x = dir('*.mtc')`` call to get a list of all functional data at once.
 5. We assume you have generated freesurfer .annot files for each subject from the atlas .gcs file, and have moved these to ``root/data/deriv/sub-xx/sub-xx_Freesurfer/``. This path can be modified in ``extractTS_ROI`` and ``null_master``.
 6. ``null_makeGCS`` hardcodes some paths - please modify as necessary.
+7. (Optional - null) ``randFragmenter.py`` hardcodes some paths - update as necessary.
 
 
 # Usage
 1. With your freesurfer output and .annot files in the proper location, run ``makePOIs('atlasNameHere');``, which will generate POI (patches of interest) files for that atlas. Repeat for every atlas you want to test.
 2. Create a "template" .POI file by manually removing any parcels you want to ignore in your analysis, ideally using an independent subject's data. The result should be named "template_atlasName.POI", and should exist in the "p.template" location in ``specifyPaths``. This is not optional. If you want to do whole-brain analysis, create a template that retains all parcels.
 3. With the .POI files generated and the .MTC files in subject-specific folders, modify ``AAA6p0`` to specify your atlases and subject numbers, then run it. This calculates summary statistics of the .MTC functional data based on the parcels specified in the .POI files, and outputs a data matrix ready for SVM classification. This will likely take two to three days to finish.
-4. (Optional - nulls) Generate "null parcellations" for your template subject by running the parcellation fragmenter in Python. This outputs freesurfer .annot files. We generated 1,000 parcellations. 
-5. (Optional - nulls) Run null_master(). This will convert your templateNull.annot files into .gcs, apply them to each subject, generate .POIs, and then extract and summarize functional data within each parcel, similar to how ``AAA6p0`` works for regular atlases.
+4. (Optional - nulls) Generate "null parcellations" for your template subject by running ``randFragmenter.py``. This outputs freesurfer .annot files. We generated 1,000 parcellations. 
+5. (Optional - nulls) Run ``null_master``. This will convert your templateNull.annot files into .GCS, apply them to each subject, generate .POIs, and then extract and summarize functional data within each parcel, similar to how ``AAA6p0`` works for regular atlases.
 6. With all your classification data generated, run either ``socvcont`` or ``critValCompare``. The former compares social and control tasks to each other, the latter compares atlases to null models.
 
 ## Reproducibility
