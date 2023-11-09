@@ -9,6 +9,7 @@
 /ROIs/
 /figures/
 */omit/*
+/omit/
 
 # Quality Checks #
 ##################
