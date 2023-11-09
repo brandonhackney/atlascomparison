@@ -26,6 +26,8 @@ QC_*.txt
 # Ideally these would have been on a separate branch, but...
 /wholebrainFC/
 /antiquatedFC/
+/versionControl/
+/backup/
 /class/attempt*/
 wbFC*.m
 FC*.m
