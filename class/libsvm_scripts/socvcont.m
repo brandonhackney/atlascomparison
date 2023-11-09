@@ -1,6 +1,5 @@
 % specify data to analyze
-style = 'atlas';
-% style = 'res';
+style = 'sch';
 omni = 'post';
 
 % Get labels
@@ -33,14 +32,19 @@ figure();
 for h = 1:2
     hem = hemstr{h};
     for j = 1:numMetrics % metric
-%         pos = nestedPosition(h,j,numMetrics);
-        pos = nestedPosition(j,h,2);
-        subplot(numMetrics,2,pos); % metric by hemisphere
+        pos = nestedPosition(h,j,numMetrics); % option 2?
+%         pos = nestedPosition(j,h,2); % option 3 - alternating
+        switch omni
+            case 'omni'
+                subplot(numMetrics,2,pos); % metric by hemisphere
+            case 'post'
+            subplot(2,numMetrics,pos); % hemisphere by metric, option 2
+        end
         x = 1:numAtlases;
         x = [x', x']; % I think?
         dat = [squeeze(mean(y1(j, :, h, :), 4))', squeeze(mean(y2(j, :, h, :), 4))' ];
         er = [squeeze(mean(er1(j, :, h, :), 4))', squeeze(mean(er2(j, :, h, :), 4))' ];
-        errorbar(x, dat, er);
+        errorbar(x, dat, er, 'LineWidth', 2);
 %         xticks([1,numAtlases]);
         xlim([0, numAtlases+1]); % add a margin
         xticks([0 x(:,1)' numAtlases+1]); % fix ticks?
@@ -51,13 +55,14 @@ for h = 1:2
         ylabel('Mean Classification accuracy');
         ylim([0, 100]);
         yticks(0:10:100);
-        legend('Social tasks', 'Control tasks', 'Location', 'northeastoutside');
+%         legend('Social tasks', 'Control tasks', 'Location', 'northeastoutside');
     end
 end
 
 % y1 and y2 are metric * atlas * hemisphere, with fold already averaged
 % Stack into a new var y that is metric * atlas * hem * condition
 % dim4 condition is 1 == social, 2 == control
+clear y
 y(:,:,:,1) = y1;
 y(:,:,:,2) = y2;
 clear y1 y2
