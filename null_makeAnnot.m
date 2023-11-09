@@ -37,9 +37,10 @@ for a = 1:length(atlasNames)
             hem = hemstr{h};
             % Options
             opts = ['-sdir ' subjpath ];
-            if contains(atlas,'null')
+            if strcmp(atlas(1:5),'null_')
                 % hardcode this colortable in
                 opts = [opts ' -t /data1/fssubdir/null174_mycolortable.txt'];
+                % Anything else should have one baked in or linked to
             end
             % Arguments
             canonsrf = 'sphere.reg';

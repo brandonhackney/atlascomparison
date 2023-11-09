@@ -12,7 +12,7 @@ function null_master(createNulls, applyToSubs, doClassSetup, RunClass, varargin)
 %   0 = skip
 %
 % Optional input: atlasGroup
-%   options are 'null', 'atlas', 'res', 'mres', or 'sch'
+%   Short string used as input to getAtlasList() - options defined there
 %   Defines which list of atlases to store the parcel info under
 %   Alters the name of the Template.mat file
 %   By default, uses 'null' since this is the "null master" code
@@ -27,7 +27,8 @@ subList = [1 2 3 4 5 6 7 8 10 11 14 17];
 % subList = [14 17];
 
 NumSubs = length(subList);
- for s = 1:length(subList)
+subCell = cell(1,NumSubs);
+ for s = 1:NumSubs
      subCell{s} = ['STS' num2str(subList(s))];
  end
 
@@ -137,7 +138,7 @@ if applyToSubs == 1
                                 
                  % sanity check labeling, only continue if there are > 1 unique labels
                 [~, l, ~] = read_annotation(nullfName); %might need path
-                if length(unique(l)) == 1
+                if length(unique(l)) <=2
 %                     fprintf(1, 'ERROR = %s has incorrect number of parcel labels. Aborting.\n', nullfName);
 %                     continue
                     error('%s contains only one parcel label. Terminating. Check fs color table and try again.',nullfName);
@@ -171,16 +172,18 @@ if applyToSubs == 1
                         fprintf(1,'Done.\n')
                     else
                         % Build the betas file
-                        % Check whether we have an timeseries file
+                        % Check whether we have a timeseries file
                         mtcDatafName = fullfile(nullDir,strcat(subj, '_ts.mat'));
                         if exist(mtcDatafName, 'file') == 2
                             fprintf(1,'\nLoading timeseries data from %s...',mtcDatafName);
                             load(mtcDatafName);
                             fprintf(1,'Done.\n')
                         else
-                            % Build the timeseries file
+                            % Build the timeseries file:
 %                             masterVertList = ??;
                             % extract timeseries and predictors from MTCs
+                            % Z-score the timeseries 
+                            % Concatenate runs vertically: TR x vertex
                             % takes a minute or two per subject
                             % Pulls data for both hemispheres
                             fprintf(1,'\nExtracting timeseries data from MTCs for %s...',subj);
@@ -196,6 +199,7 @@ if applyToSubs == 1
                         % Calculate betas from timeseries data
                         % Do it for both hemispheres at once
                         % This avoids the headache of loop logic
+                        % Number of output rows = numConds + numRuns
                         fprintf(1,'\nCalculating betas for %s...',subj);
                         betas{1} = null_calcBetas(mtcData, 1);
                         betas{2} = null_calcBetas(mtcData, 2);

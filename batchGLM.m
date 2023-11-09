@@ -104,7 +104,6 @@ for a = 1:length(atlasList)
                 output.task(t).taskname = contName;
                 output.task(t).sub(s).hem(h).name = hem;
                 [posInd,negInd] = getConditionFromFilename(contName);
-    %             [output.task(t).sub(s).hem(h).data, fMap] = getGLM(pattern,pred,posInd,negInd);
                 [tMap,output.task(t).sub(s).hem(h).data.beta,output.task(t).sub(s).hem(h).data.residuals] = simpleGLM(pattern,pred,getContrastVector(size(pred,2),posInd,negInd));
                     tMap = single(tMap'); % conversion of simpleGLM output to match getGLM
                     

@@ -6,6 +6,31 @@
 *.mat
 *.fig
 /Plots/
+/ROIs/
+/figures/
+*/omit/*
+/omit/
+
+# Quality Checks #
+##################
+# I've made a suite of functions to do unit tests etc.
+# and 99% of them don't need to be published
+QC_*.m
+test*.m
+*_test.m
+QC_*.txt
+
+# Misc #
+########
+# Other project-related files we don't want to track, but do want to keep
+# Ideally these would have been on a separate branch, but...
+/wholebrainFC/
+/antiquatedFC/
+/class/attempt*/
+wbFC*.m
+FC*.m
+null_FC*.m
+pathdef.m
 
 # Packages #
 ############
@@ -25,6 +50,8 @@
 *.log
 *.sql
 *.sqlite
+*_log.txt
+diary
 
 # OS generated files #
 ######################
@@ -35,3 +62,4 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+*.asv

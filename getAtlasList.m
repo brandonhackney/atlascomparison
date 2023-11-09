@@ -7,7 +7,7 @@ function [atlasList, varargout] = getAtlasList(atlasGroup)
 % numAtlas = number of 'atlases', i.e. not including iterations
 % numItems = total length of atlasList (i.e. numIter * numAtlas)
 
-validList = {'atlas','null','sch','res','mres','atlasBIG','nullSMALL'};
+validList = {'atlas','null','sch','schnull','res','mres','atlasBIG','nullSMALL'};
 assert(ischar(atlasGroup), 'Input must be a string.');
 assert(ismember(atlasGroup, validList), sprintf('Input options are %s', sprintf('%s, ',validList{:})));
 
@@ -60,7 +60,22 @@ switch atlasGroup
             rnum = resList(a);
             atlasList{a} = ['schaefer',num2str(rnum)];
         end
-        
+    case 'schnull'
+        % A set of nulls specifically matched to the schaefer resolutions
+        % Different from res and mres, which search for an elbow
+        atlasList = [];
+        resList = [100 200 400 600 800 1000];
+        numAtlas = length(resList);
+        numIter = 50; % how many of each resolution?
+        numItems = numAtlas * numIter;
+        for r = length(resList):-1:1
+            rnum = resList(r);
+            rname = ['schnull',num2str(rnum,'%04.f')];
+            for n = numIter:-1:1
+                a = (r-1) * numIter + n; % calc nested position
+                atlasList{a} = [rname '_' num2str(n-1,'%02.f')];
+            end
+        end
     case 'res'
         % A single iteration of null parcelations at various resolutions
         % Output is e.g. 'res150'

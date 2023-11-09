@@ -18,7 +18,6 @@ fList = dir(strcat(p.classifyDataPath, filesep, '*', metricID, '*', atlasID, '.m
 if length(fList) ==  1
     load([fList.folder filesep fList.name]);
     NumSubs = size(Data.subID, 1);
-%     taskList = createTaskList(typeName); %social or control
 %     taskIn = findTaskIn(taskList, Data.taskNames); %narrow down to specific conditions
     [taskIn,taskNames, labs] = taskTypeConv(typeName,Data.taskNames, NumSubs);
         labs = labs'; % if not taskNames', then labs'.
@@ -55,12 +54,17 @@ if length(fList) ==  1
         which svmtrain
         svmStruct = svmtrain(trainLabels, trainData);
         
-        
         %4. Test trained classifier
 %         [predicted_label, accuracy, prob_est] = svmpredict(testLabels, testData, svmStruct, testData);
         [predicted_label, accuracy, prob_est] = svmpredict(testLabels, testData, svmStruct);
         try
-            score(:, i) = accuracy(1);
+            if isnan(accuracy(1))
+                score(:,i) = 0;
+            else
+                % accuracy has 3 elements: percent correct, MSE, and r^2.
+                % We just want accuracy(1), the percent correct.
+                score(:, i) = accuracy(1);
+            end
         catch
             error('score has size %i while accuracy has size %i',size(score), size(accuracy))
         end
@@ -100,8 +104,7 @@ if length(fList) ==  1
     fprintf(1, '\n\nAtlas: %s, metric: %s, Accuracy across folds:', atlasID, metricID);
     fprintf(1, '\t%0.2f', score(1, :));
     fprintf(1, '\nMean accuracy: %0.2f\n', mean(score(1, :)));
-%     cd(p.classifyPath)
-    
+%     cd(p.classifyPath)    
 else
     fprintf(1, '\n\n********* Error: More than one data file found *********');
 end
