@@ -40,6 +40,10 @@ else
     condID = 'all';
 end
 
+% Define what kind of classifier to use: svm or nbayes
+ctype = 'nbayes';
+% ctype = 'svm';
+
 usedTaskList = getTaskList(condID); % used to subset data from class files
 
 numIter = 1; % default
@@ -168,8 +172,8 @@ for h = 1:2
                    score(m, :, a, h, iter) = NaN;
                    continue
                end
-               
-               [score(m, :, a, h, iter), cmat, taskNames, truelabel, predlabel] = atlasClassify(atlasfName{f}, metricID{m}, condID, h);
+
+               [score(m, :, a, h, iter), cmat, taskNames, truelabel, predlabel] = atlasClassify(atlasfName{f}, metricID{m}, condID, h, ctype);
                if a == 1 && iter == 1
                    taskList{m} = taskNames;
                end
@@ -179,7 +183,7 @@ for h = 1:2
                prdLab{m,a,h} = [prdLab{m,a,h}; predlabel];
            end % for iter
        end % for atlas
-       cd(p.basePath)
+%        cd(p.basePath)
     end % for metric
 
 end % for hemisphere

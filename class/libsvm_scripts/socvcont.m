@@ -1,5 +1,5 @@
 % specify data to analyze
-style = 'sch';
+style = 'atlas';
 omni = 'post';
 
 % Get labels
@@ -55,7 +55,7 @@ for h = 1:2
         ylabel('Mean Classification accuracy');
         ylim([0, 100]);
         yticks(0:10:100);
-%         legend('Social tasks', 'Control tasks', 'Location', 'northeastoutside');
+        legend('Social tasks', 'Control tasks', 'Location', 'southoutside');
     end
 end
 

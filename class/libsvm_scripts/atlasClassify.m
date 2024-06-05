@@ -13,6 +13,11 @@ if nargin > 3
     hemi = varargin{1};
     % please use 1 for left, 2 for right
 end
+if nargin > 4
+    classType = varargin{2};
+else
+    classType = 'svm';
+end
 
 fList = dir(strcat(p.classifyDataPath, filesep, '*', metricID, '*', atlasID, '.mat'));
 if length(fList) ==  1
@@ -50,13 +55,28 @@ if length(fList) ==  1
         
         
         %3. Train classifier
-        cd(p.libsvm)
-        which svmtrain
-        svmStruct = svmtrain(trainLabels, trainData);
+        switch classType
+            case 'svm'
+                % Support Vector Machine classifier
+                cd(p.libsvm)
+                which svmtrain
+                svmStruct = svmtrain(trainLabels, trainData);
+
+                %4. Test trained classifier
+        %         [predicted_label, accuracy, prob_est] = svmpredict(testLabels, testData, svmStruct, testData);
+                [predicted_label, accuracy, prob_est] = svmpredict(testLabels, testData, svmStruct);
+
+            case 'nbayes'
+                % Naive Bayes classifier
+%                 Tbl = table(trainData);
+                nbStruct = fitcnb(trainData, labs(trainLabels), 'ClassNames', taskNames);
+                [predicted_label, Posterior, Cost] = nbStruct.predict(testData);
+                accuracy = mean(strcmp(labs(testLabels), predicted_label)) * 100;
+                % predicted_label is now a cell, but later code wants inds
+                % convert to indices for compatibility.
+                [~,predicted_label] = ismember(predicted_label, labs);
+        end
         
-        %4. Test trained classifier
-%         [predicted_label, accuracy, prob_est] = svmpredict(testLabels, testData, svmStruct, testData);
-        [predicted_label, accuracy, prob_est] = svmpredict(testLabels, testData, svmStruct);
         try
             if isnan(accuracy(1))
                 score(:,i) = 0;
@@ -109,3 +129,4 @@ else
     fprintf(1, '\n\n********* Error: More than one data file found *********');
 end
 
+cd(p.classifyPath); % return to source dir
