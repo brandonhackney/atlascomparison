@@ -306,15 +306,15 @@ for h = 1:2
         end % for metric
         
 % Export data before moving to next loop
-fout = sprintf('%s_%s_%s.mat', style, omni, condID);
-fpout = fullfile(p.basePath, 'class', 'results', fout);
-save(fpout, 'score', 'distro', 'errorTerm', 'CVupper', 'CVlower', 'atlasname', 'metricID');
-
-% Export figure to file
-
-hout = strjoin({'CritVal',style, omni, condID, [hemstr{h} '.eps']},'_');
-hpout = fullfile(p.basePath, 'figures', hout);
-hgexport(fig, hpout);
+% fout = sprintf('%s_%s_%s.mat', style, omni, condID);
+% fpout = fullfile(p.basePath, 'class', 'results', fout);
+% save(fpout, 'score', 'distro', 'errorTerm', 'CVupper', 'CVlower', 'atlasname', 'metricID');
+% 
+% % Export figure to file
+% 
+% hout = strjoin({'CritVal',style, omni, condID, [hemstr{h} '.eps']},'_');
+% hpout = fullfile(p.basePath, 'figures', hout);
+% hgexport(fig, hpout);
 end % for hemisphere
 
 end % for condition
