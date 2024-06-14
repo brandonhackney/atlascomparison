@@ -75,6 +75,14 @@ if length(fList) ==  1
                 % predicted_label is now a cell, but later code wants inds
                 % convert to indices for compatibility.
                 [~,predicted_label] = ismember(predicted_label, labs);
+            case 'lda'
+                % Linear Discriminant Analysis classifier
+                ldaStruct = fitcdiscr(trainData, labs(trainLabels));
+                predicted_label = ldaStruct.predict(testData);
+                accuracy = mean(strcmp(labs(testLabels), predicted_label)) * 100;
+                % predicted_label is now a cell, but later code wants inds
+                % convert to indices for compatibility.
+                [~,predicted_label] = ismember(predicted_label, labs);
         end
         
         try
