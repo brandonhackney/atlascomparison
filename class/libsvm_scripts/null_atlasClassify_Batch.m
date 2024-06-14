@@ -40,9 +40,12 @@ else
     condID = 'all';
 end
 
-% Define what kind of classifier to use: svm or nbayes
-ctype = 'nbayes';
-% ctype = 'svm';
+% Pick which kind of classifier to use: 'svm', 'nbayes', or 'lda'
+if nargin > 3
+    ctype = varargin{4};
+else
+    ctype = 'svm';
+end
 
 usedTaskList = getTaskList(condID); % used to subset data from class files
 
