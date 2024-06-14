@@ -40,6 +40,13 @@ else
     condID = 'all';
 end
 
+% Pick which kind of classifier to use: 'svm', 'nbayes', or 'lda'
+if nargin > 3
+    ctype = varargin{4};
+else
+    ctype = 'svm';
+end
+
 usedTaskList = getTaskList(condID); % used to subset data from class files
 
 numIter = 1; % default
@@ -149,40 +156,56 @@ hemstr = {'LH','RH'};
 % end
 
 %% Calculate accuracy for each atlas
-% Preallocate score with nans
-% This way, skip trials don't get set to 0 and included in means
-score = nan([numMetrics, numSubs, numAtlases, 2, numIter]);
+% Or load existing results bc these calculations can be very slow
+% Check the 'results' folder
+outDir = fullfile(p.classifyPath, '..', 'results');
+outfname = strjoin({style, omni, condID, ctype, 'wFolds'}, '_');
+out = fullfile(outDir, [outfname '.mat']);
+if exist(out, 'file')
+    load(out, 'score');
+else
+    % Run the calculations.
+    % Preallocate score with nans
+    % This way, skip trials don't get set to 0 and included in means
+    score = nan([numMetrics, numSubs, numAtlases, 2, numIter]);
 
-for h = 1:2
-%     figure(); % to contain the plots from makeSVMweights
-    for m = 1:numMetrics
-       for a = 1:numAtlases
-           confMats{m,a,h} = 0;
-           truLab{m,a,h} = [];
-           prdLab{m,a,h} = [];
-           for iter = 1:numIter
-               f = nestedPosition(a,iter,numIter);
-               % If this iter is on the naughty list, then skip it
-               if naughtyList(f, h)
-                   % Maybe unnecessary but I'm being CAREFUL
-                   score(m, :, a, h, iter) = NaN;
-                   continue
-               end
-               
-               [score(m, :, a, h, iter), cmat, taskNames, truelabel, predlabel] = atlasClassify(atlasfName{f}, metricID{m}, condID, h);
-               if a == 1 && iter == 1
-                   taskList{m} = taskNames;
-               end
-               % Concatenate data for all iterations
-               confMats{m,a,h} = confMats{m,a,h} + cmat;
-               truLab{m,a,h} = [truLab{m,a,h}; truelabel];
-               prdLab{m,a,h} = [prdLab{m,a,h}; predlabel];
-           end % for iter
-       end % for atlas
-       cd(p.basePath)
-    end % for metric
+    for h = 1:2
+    %     figure(); % to contain the plots from makeSVMweights
+        for m = 1:numMetrics
+           for a = 1:numAtlases
+               confMats{m,a,h} = 0;
+               truLab{m,a,h} = [];
+               prdLab{m,a,h} = [];
+               for iter = 1:numIter
+                   f = nestedPosition(a,iter,numIter);
+                   % If this iter is on the naughty list, then skip it
+                   if naughtyList(f, h)
+                       % Maybe unnecessary but I'm being CAREFUL
+                       score(m, :, a, h, iter) = NaN;
+                       continue
+                   end
 
-end % for hemisphere
+                   [score(m, :, a, h, iter), cmat, taskNames, truelabel, predlabel] = atlasClassify(atlasfName{f}, metricID{m}, condID, h, ctype);
+                   if a == 1 && iter == 1
+                       taskList{m} = taskNames;
+                   end
+                   % Concatenate data for all iterations
+                   confMats{m,a,h} = confMats{m,a,h} + cmat;
+                   truLab{m,a,h} = [truLab{m,a,h}; truelabel];
+                   prdLab{m,a,h} = [prdLab{m,a,h}; predlabel];
+               end % for iter
+           end % for atlas
+    %        cd(p.basePath)
+        end % for metric
+
+    end % for hemisphere
+    
+    % Export data with folds
+    % Now that I'm using Naive Bayes, I want the fold info for plotting.
+    % This is what the previous step checks for.
+    save(out, 'score');
+    
+end % if data already exists
 
 %% AVERAGE ACROSS FOLDS
 % We need to average across all the SVM folds, because:
@@ -459,7 +482,7 @@ if nargout > 0
 end
 if nargout > 1
     % Export chance percentage
-    varargout{2} = 1/numel(taskNames);
+    varargout{2} = 1/numel(usedTaskList);
 end
 if nargout > 2
     % Export standard error over fold
