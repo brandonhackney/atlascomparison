@@ -1,5 +1,5 @@
 function varargout = null_atlasClassify_Batch(varargin)
-% [score], [chance%], [stdError] = null_atlasClassify_Batch([atlasStyle], [omni/post], [taskTypes])
+% [score], [chance%], [stdError] = null_atlasClassify_Batch([atlasStyle], [omni/post], [taskTypes], [classifierType])
 %
 % Runs atlasClassify on multiple atlases, plotting results
 % Default is omnibus classification of normal atlases
@@ -8,6 +8,7 @@ function varargout = null_atlasClassify_Batch(varargin)
 % atlasStyle is one of: atlas, sch, null, res
 % omni is one of: omni, post
 % taskTypes is one of: social, motion, control, or all
+% classifierType is one of: svm, nyabes, or lda
 
 % clc;
 % close all;

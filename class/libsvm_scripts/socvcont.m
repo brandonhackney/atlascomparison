@@ -1,6 +1,7 @@
 % specify data to analyze
 style = 'atlas';
 omni = 'post';
+ctype = 'svm';
 
 % Get labels
 switch omni
@@ -23,8 +24,8 @@ end
 numAtlases = length(atlasname);
 
 % Get data
-[y1, ~, er1] = null_atlasClassify_Batch(style, omni,'social'); y1 = single(y1);
-[y2, ~, er2] = null_atlasClassify_Batch(style, omni,'control'); y2 = single(y2);
+[y1, ~, er1] = null_atlasClassify_Batch(style, omni,'social', ctype); y1 = single(y1);
+[y2, ~, er2] = null_atlasClassify_Batch(style, omni,'control', ctype); y2 = single(y2);
 
 hemstr = {'LH', 'RH'};
 % Plot accuracy across atlases as a line graph, with error bars for folds
