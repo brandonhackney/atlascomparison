@@ -1,5 +1,5 @@
 function varargout = null_atlasClassify_Batch(varargin)
-% [score], [chance%], [stdError] = null_atlasClassify_Batch([atlasStyle], [omni/post], [taskTypes])
+% [score], [chance%], [stdError] = null_atlasClassify_Batch([atlasStyle], [omni/post], [taskTypes], [classifierType])
 %
 % Runs atlasClassify on multiple atlases, plotting results
 % Default is omnibus classification of normal atlases
@@ -8,6 +8,7 @@ function varargout = null_atlasClassify_Batch(varargin)
 % atlasStyle is one of: atlas, sch, null, res
 % omni is one of: omni, post
 % taskTypes is one of: social, motion, control, or all
+% classifierType is one of: svm, nyabes, or lda
 
 % clc;
 % close all;
@@ -136,13 +137,6 @@ numMetrics = size(metricID,2);
 numAtlases = size(atlasID,2);
 hemstr = {'LH','RH'};
 
-% Get number of subjects by temporarily loading a data file
-    tfname = sprintf('Classify_%s_%s.mat', metricID{1}, atlasfName{1});
-    tfpath = fullfile(p.classifyDataPath, tfname);
-    Data = importdata(tfpath);
-    numSubs = length(Data.subID);
-    clear Data tfname tfpath;
-
 %% TEMP
 % Subset to the top or bottom 50, based on an external variable
 % THis worked in conjunction with something else, but I've forgotten what..
@@ -163,7 +157,15 @@ outfname = strjoin({style, omni, condID, ctype, 'wFolds'}, '_');
 out = fullfile(outDir, [outfname '.mat']);
 if exist(out, 'file')
     load(out, 'score');
+    numSubs = size(score, 2);
 else
+    % Get number of subjects by temporarily loading a data file
+    tfname = sprintf('Classify_%s_%s.mat', metricID{1}, atlasfName{1});
+    tfpath = fullfile(p.classifyDataPath, tfname);
+    Data = importdata(tfpath);
+    numSubs = length(Data.subID);
+    clear Data tfname tfpath;
+    
     % Run the calculations.
     % Preallocate score with nans
     % This way, skip trials don't get set to 0 and included in means

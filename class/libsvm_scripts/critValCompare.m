@@ -17,6 +17,11 @@ if nargin < 2
 else
     omni = varargin{2};
 end
+if nargin < 3
+    ctype = 'svm';
+else
+    ctype = varargin{3};
+end
 condList = {'social', 'control'};
 
 atlasname = getAtlasList(style);
@@ -37,7 +42,7 @@ for c = 1:numel(condList)
 condID = condList{c};
 %% Generate a null distribution from the null data
 % Get the null classification data
-distro = null_atlasClassify_Batch(nullName,omni,condID);
+distro = null_atlasClassify_Batch(nullName,omni,condID,ctype);
 scsz = size(distro);
 % Which dimension has the atlas info?
 % metric atlas hem iteration, so dim 4 for nulls
@@ -73,7 +78,7 @@ CVupper = mu + margError;
 
 %% Get the atlas data
 clear score
-[score, chance, errorTerm] = null_atlasClassify_Batch(style,omni, condID);
+[score, chance, errorTerm] = null_atlasClassify_Batch(style,omni, condID, ctype);
 
 scsz = size(score);
     numMetric = scsz(1);
