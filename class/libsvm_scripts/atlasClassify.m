@@ -3,12 +3,6 @@ function [score, conMat, varargout] = atlasClassify(atlasID, metricID, typeName,
 % cd ../.. % start off in the base analysis dir so we can actually call p
 p = specifyPaths;
 
-% NOTE: %there is a matlab function in the stats toolbox with the same name
-% as the libsvm one. I will dynamically change the path to make sure I use
-% the correct one
-% p.libsvm = '/usr/local/MATLAB/R2017a/toolbox/libsvm-3.25';
-p = libsvmpath(p); % this function is more dynamic than the above
-
 if nargin > 3
     hemi = varargin{1};
     % please use 1 for left, 2 for right
@@ -58,6 +52,12 @@ if length(fList) ==  1
         switch classType
             case 'svm'
                 % Support Vector Machine classifier
+                % NOTE: %there is a matlab function in the stats toolbox with the same name
+                % as the libsvm one. I will dynamically change the path to make sure I use
+                % the correct one
+                % p.libsvm = '/usr/local/MATLAB/R2017a/toolbox/libsvm-3.25';
+                p = libsvmpath(p); % this function is more dynamic than the above
+
                 cd(p.libsvm)
                 which svmtrain
                 svmStruct = svmtrain(trainLabels, trainData);
