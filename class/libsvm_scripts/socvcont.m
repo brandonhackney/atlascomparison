@@ -163,3 +163,13 @@ dims = [2,3];
 [php, phm, phf, phg] = multcompare(stats, 'Dimension', dims); % come back and play with this - change which dims to compare
 % Get the actual means for each item
 [phg num2cell(phm)]
+
+
+% Print stats from multcompare
+tbl2 = array2table(php,"VariableNames", ["Group A","Group B","Lower Limit","A-B","Upper Limit","P-value"]);
+tbl2.("Group A")=phg(tbl2.("Group A"));
+tbl2.("Group B")=phg(tbl2.("Group B"));
+newAlpha = .05 / height(tbl2);
+tbl2.("Sig?") = tbl2.("P-value") <= newAlpha;
+fprintf(1, '\nSignificant terms with Bonferroni alpha = %0.4f:\n', newAlpha);
+disp(tbl2(tbl2.("Sig?") == true, :));
