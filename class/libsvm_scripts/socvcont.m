@@ -7,9 +7,11 @@ ctype = 'svm';
 switch omni
     case 'omni'
         metricID = {'omnibus'};
+        fSize = 35;
     case 'post'
 %         metricID = {'meanB','overlap','stdB','meanPosB'};
         metricID = {'Contrast', 'Spatial Agreement', 'Inhomogeneity', 'Activation'};
+        fSize = 20;
 end
 numMetrics = length(metricID);
 
@@ -21,6 +23,15 @@ switch style
     case 'res'
         atlasname = getAtlasList('res');
 end
+
+switch ctype
+    case 'svm'
+        cname = 'SVM';
+    case 'nbayes'
+        cname = 'Naive Bayes';
+    case 'lda'
+        cname = 'LDA';
+end
 numAtlases = length(atlasname);
 
 % Get data
@@ -29,7 +40,7 @@ numAtlases = length(atlasname);
 
 hemstr = {'LH', 'RH'};
 % Plot accuracy across atlases as a line graph, with error bars for folds
-figure();
+f = figure();
 for h = 1:2
     hem = hemstr{h};
     for j = 1:numMetrics % metric
@@ -45,18 +56,20 @@ for h = 1:2
         x = [x', x']; % I think?
         dat = [squeeze(mean(y1(j, :, h, :), 4))', squeeze(mean(y2(j, :, h, :), 4))' ];
         er = [squeeze(mean(er1(j, :, h, :), 4))', squeeze(mean(er2(j, :, h, :), 4))' ];
-        errorbar(x, dat, er, 'LineWidth', 2);
+        errorbar(x, dat, er, 'LineWidth', 6, 'CapSize', 18);
 %         xticks([1,numAtlases]);
         xlim([0, numAtlases+1]); % add a margin
         xticks([0 x(:,1)' numAtlases+1]); % fix ticks?
         xticklabels([{''}, atlasname]); % put a blank label on 0
-        xtickangle(45); % for legibility
+        xtickangle(30); % for legibility
         title(sprintf('%s %s',hem, metricID{j}));
-        xlabel('Atlas');
-        ylabel('Mean Classification accuracy');
+        % xlabel('Atlas');
+        ylabel(sprintf('%s Classification accuracy', cname));
         ylim([0, 100]);
         yticks(0:10:100);
         legend('Social tasks', 'Control tasks', 'Location', 'southoutside');
+        fontsize(f, fSize, 'points');
+        set(gca, 'linewidth', 4);
     end
 end
 
